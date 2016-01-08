@@ -46,6 +46,7 @@ except ImportError:
 
 
 dirs = [
+    "mesh",
     "draco_stem",
 ]
 # "tissue_analysis",
