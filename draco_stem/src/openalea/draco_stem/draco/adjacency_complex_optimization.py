@@ -37,6 +37,7 @@ from openalea.mesh.property_topomesh_analysis import *
 from openalea.mesh.utils.intersection_tools import inside_triangle, intersecting_segment, intersecting_triangle
 from openalea.mesh.utils.evaluation_tools import jaccard_index
 from openalea.mesh.utils.array_tools import array_unique
+from openalea.mesh.utils.geometry_tools import tetra_geometric_features, triangle_geometric_features
 
 from sys                                    import argv
 from time                                   import time, sleep
@@ -1028,7 +1029,7 @@ def tetrahedrization_topomesh_topological_optimization(input_triangulation_topom
             
             def array_delaunay(points,indices):
                 from openalea.mesh.utils.delaunay_tools import delaunay_triangulation
-                # from openalea.plantgl.algo import delaunay_triangulation
+                #from openalea.plantgl.algo import delaunay_triangulation
                 import numpy as np
                 if len(indices)>3:
                     triangulation = delaunay_triangulation(points)

@@ -25,7 +25,7 @@ from scipy.cluster.vq import vq
 from openalea.container.array_dict import array_dict
 from openalea.container.property_topomesh import PropertyTopomesh
 from openalea.mesh.property_topomesh_analysis import *
-from openaela.mesh.utils.tissue_analysis_tools import cell_vertex_extraction
+from openalea.mesh.utils.tissue_analysis_tools import cell_vertex_extraction
 from openalea.mesh.utils.array_tools import array_unique
 from openalea.container.topomesh_algo import is_collapse_topo_allowed, collapse_edge
 
