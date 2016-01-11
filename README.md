@@ -4,7 +4,7 @@ Dual Reconstruction by Adjacency Complex Optimization (DRACO) - SAM Tissue Enhan
 
 OpenAlea library for the reconstruction of 3D meshes from segmented shoot apical meristem (SAM) tissue images
 
-![](https://nschloe.github.io/meshio/pp.png)
+![](https://gcerutti.github.io/draco-stem/draco-stem/logo.png)
 ### Installation
 
  * Install OpenAlea
