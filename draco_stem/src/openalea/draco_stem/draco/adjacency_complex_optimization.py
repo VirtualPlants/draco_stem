@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 # -*- python -*-
 #
-#       Meshing
+#       DRACO-STEM
+#       Dual Reconstruction by Adjacency Complex Optimization
+#       SAM Tissue Enhanced Mesh
 #
 #       Copyright 2014-2016 INRIA - CIRAD - INRA
 #
@@ -538,99 +540,6 @@ def tetrahedrization_topomesh_remove_exterior(triangulation_topomesh):
         compute_topomesh_property(triangulation_topomesh,'triangles',3)
         compute_topomesh_property(triangulation_topomesh,'vertices',3)
         compute_topomesh_property(triangulation_topomesh,'epidermis',2)
-
-def tetrahedra_topomesh(tetrahedra, positions, **kwargs):
-
-    tetrahedra_triangles = array_unique(np.concatenate(np.sort(tetrahedra[:,tetra_triangle_list])))
-
-    tetrahedra_triangle_edges = tetrahedra_triangles[:,triangle_edge_list]
-    tetrahedra_triangle_vectors = positions.values(tetrahedra_triangle_edges[...,1]) - positions.values(tetrahedra_triangle_edges[...,0])
-    tetrahedra_triangle_lengths = np.linalg.norm(tetrahedra_triangle_vectors,axis=2)
-    tetrahedra_triangle_perimeters = tetrahedra_triangle_lengths.sum(axis=1)
-
-    tetrahedra_edges = array_unique(np.concatenate(tetrahedra_triangles[:,triangle_edge_list],axis=0))
-
-    start_time = time()
-    print "--> Generating tetrahedra topomesh"
-    triangle_edges = np.concatenate(tetrahedra_triangles[:,triangle_edge_list],axis=0)
-    triangle_edge_matching = vq(triangle_edges,tetrahedra_edges)[0]
-
-    tetrahedra_faces = np.concatenate(np.sort(tetrahedra[:,tetra_triangle_list]))
-    tetrahedra_triangle_matching = vq(tetrahedra_faces,tetrahedra_triangles)[0]
-
-    tetrahedra_topomesh = PropertyTopomesh(3)
-    for c in np.unique(tetrahedra_triangles):
-        tetrahedra_topomesh.add_wisp(0,c)
-    for e in tetrahedra_edges:
-        eid = tetrahedra_topomesh.add_wisp(1)
-        for pid in e:
-            tetrahedra_topomesh.link(1,eid,pid)
-    for t in tetrahedra_triangles:
-        fid = tetrahedra_topomesh.add_wisp(2)
-        for eid in triangle_edge_matching[3*fid:3*fid+3]:
-            tetrahedra_topomesh.link(2,fid,eid)
-    for t in tetrahedra:
-        cid = tetrahedra_topomesh.add_wisp(3)
-        for fid in tetrahedra_triangle_matching[4*cid:4*cid+4]:
-            tetrahedra_topomesh.link(3,cid,fid)
-    tetrahedra_topomesh.update_wisp_property('barycenter',0,positions.values(np.unique(tetrahedra_triangles)),keys=np.unique(tetrahedra_triangles))        
-
-    end_time = time()
-    print "<-- Generating tetrahedra topomesh [",end_time-start_time,"s]"
-
-    return tetrahedra_topomesh
-
-def triangle_topomesh(triangles, positions, **kwargs):
-
-    edges = array_unique(np.concatenate(triangles[:,triangle_edge_list],axis=0))
-
-    triangle_edges = np.concatenate(triangles[:,triangle_edge_list])
-
-    start_time = time()
-    print "--> Generating triangle topomesh"
-
-    triangle_edge_matching = vq(triangle_edges,edges)[0]
-
-    triangle_topomesh = PropertyTopomesh(3)
-    for c in np.unique(triangles):
-        triangle_topomesh.add_wisp(0,c)
-    for e in edges:
-        eid = triangle_topomesh.add_wisp(1)
-        for pid in e:
-            triangle_topomesh.link(1,eid,pid)
-    for t in triangles:
-        fid = triangle_topomesh.add_wisp(2)
-        for eid in triangle_edge_matching[3*fid:3*fid+3]:
-            triangle_topomesh.link(2,fid,eid)
-    triangle_topomesh.add_wisp(3,0)
-    for fid in triangle_topomesh.wisps(2):
-        triangle_topomesh.link(3,0,fid)
-    triangle_topomesh.update_wisp_property('barycenter',0,positions.values(np.unique(triangles)),keys=np.unique(triangles))    
-
-    end_time = time()
-    print "<-- Generating triangle topomesh [",end_time-start_time,"s]"
-
-    return triangle_topomesh
-
-def edge_topomesh(edges, positions, **kwargs):
-
-    start_time = time()
-    print "--> Generating edge topomesh"
-
-    edge_topomesh = PropertyTopomesh(3)
-    for c in np.unique(edges):
-        edge_topomesh.add_wisp(0,c)
-    for e in edges:
-        eid = edge_topomesh.add_wisp(1)
-        for pid in e:
-            edge_topomesh.link(1,eid,pid)
-    edge_topomesh.update_wisp_property('barycenter',0,positions.values(np.unique(edges)),keys=np.unique(edges))    
-
-    end_time = time()
-    print "<-- Generating edge topomesh [",end_time-start_time,"s]"
-
-    return edge_topomesh
-
 
 
 

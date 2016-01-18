@@ -44,14 +44,14 @@ tetra_triangle_edge_list  = np.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])
 tetra_triangle_list  = np.array([[0,1,2],[0,1,3],[0,2,3],[1,2,3]])
 triangle_edge_list  = np.array([[1, 2],[0, 2],[0, 1]])
 
-def tetrahedra_dual_topomesh(image_tetrahedra,positions,voronoi=True,exterior=True,**kwargs):
+def tetrahedra_dual_topomesh(image_tetrahedra, positions, voronoi=True, exterior=True, **kwargs):
     """
     Generates a PropertyTopomesh as the dual of a set of tetrahedra
     Tetrahedron -> Topomesh vertex
     Triangle -> Topomesh edge
     Edge -> Topomesh interface
     Vertex -> Topomesh cell
-    Vertices are placed as the barycenters of tetrahedra (estimated for exterior vertices) 
+    Vertices are placed as the barycenters of tetrahedra (estimated for exterior vertices) or 
     """
     image_topomesh = PropertyTopomesh(3)
     vertex_positions = {}
@@ -432,7 +432,7 @@ def tetrahedra_dual_triangular_topomesh(triangulation_topomesh,image_cell_vertex
             # print image_topomesh.wisp_property('barycenter',0)[v]," -> ",final_vertex_positions[v]
             image_topomesh.wisp_property('barycenter',0)[v] = final_vertex_positions[v]
 
-    if triangular == "" or triangular is None:
+    if len(triangular) == 0 or triangular is None:
         return image_topomesh
     else:
         from openalea.mesh.property_topomesh_optimization import optimize_topomesh, property_topomesh_edge_split_optimization, property_topomesh_edge_flip_optimization
@@ -504,7 +504,10 @@ def tetrahedra_dual_triangular_topomesh(triangulation_topomesh,image_cell_vertex
             image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65),('laplacian',0.5),('epidermis_planarization',0.1)]),omega_regularization_max=0.0,gradient_derivatives=None,cell_vertex_motion=True,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10,iterations_per_step=1)   
             image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=False,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=3,iterations_per_step=1)   
 
-        return image_triangular_topomesh
+        try:
+            return image_triangular_topomesh
+        except:
+            return image_topomesh
 
 
 def triangulated_interface_topomesh(image_topomesh,maximal_length,inner_interfaces=True):

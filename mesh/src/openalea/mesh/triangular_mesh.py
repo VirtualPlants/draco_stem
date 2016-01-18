@@ -337,7 +337,7 @@ def topomesh_to_triangular_mesh(topomesh, degree=3, coef=1.0, mesh_center=None, 
                 triangular_mesh.point_data = topomesh.wisp_property(property_name,property_degree).to_dict()
         triangle_topomesh_cells = {}
         triangle_topomesh_triangles = {}
-        vertices_topomesh_vertices = {}
+        vertices_topomesh_vertices = dict(zip(triangular_mesh.points.keys(),triangular_mesh.points.keys()))
 
     mesh_element_matching = {}
     mesh_element_matching[0] = vertices_topomesh_vertices

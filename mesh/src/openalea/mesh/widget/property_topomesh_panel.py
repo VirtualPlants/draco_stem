@@ -383,14 +383,19 @@ class TopomeshControlPanel(QtGui.QWidget, AbstractListener):
                     property_name = world_object['property_name_'+str(display_degree)]
                     property_degree = world_object['property_degree_'+str(display_degree)]
                     mesh_element_matching = self._mesh_matching[world_object.name][display_degree][property_degree]
-                    property_data = array_dict(topomesh.wisp_property(property_name,property_degree).values(mesh_element_matching.values()),mesh_element_matching.keys())
+                    print mesh_element_matching
+                    if topomesh.has_wisp_property(property_name,property_degree):
+                        property_data = array_dict(topomesh.wisp_property(property_name,property_degree).values(mesh_element_matching.values()),mesh_element_matching.keys())
+                    else:
+                        property_data = array_dict()
                     if property_degree == 0:
                         self._mesh[world_object.name][display_degree].point_data = property_data.to_dict()
                     else:
                         self._mesh[world_object.name][display_degree].triangle_data = property_data.to_dict()
 
                     self.world[world_object.name+"_"+self.element_names[display_degree]].data = self._mesh[world_object.name][display_degree]
-                    self.world[world_object.name+"_"+self.element_names[display_degree]].set_attribute('intensity_range',(property_data.values().min(),property_data.values().max()))
+                    if len(property_data)>1:
+                        self.world[world_object.name+"_"+self.element_names[display_degree]].set_attribute('intensity_range',(property_data.values().min(),property_data.values().max()))
 
             elif 'property_degree_' in attribute['name']:
                 dtype = 'topomesh'
