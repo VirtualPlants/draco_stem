@@ -36,6 +36,7 @@ from openalea.container.property_topomesh import PropertyTopomesh
 from openalea.mesh.property_topomesh_analysis import *
 from openalea.mesh.utils.intersection_tools import inside_triangle, intersecting_segment, intersecting_triangle
 from openalea.mesh.utils.array_tools  import array_unique
+from openalea.mesh.property_topomesh_optimization import topomesh_triangle_split
 
 from time                                   import time, sleep
 
@@ -435,7 +436,9 @@ def tetrahedra_dual_triangular_topomesh(triangulation_topomesh,image_cell_vertex
     if len(triangular) == 0 or triangular is None:
         return image_topomesh
     else:
-        from openalea.mesh.property_topomesh_optimization import optimize_topomesh, property_topomesh_edge_split_optimization, property_topomesh_edge_flip_optimization
+        from openalea.mesh.property_topomesh_optimization import property_topomesh_edge_split_optimization, property_topomesh_edge_flip_optimization
+        from openalea.draco_stem.stem.tissue_mesh_optimization import optimize_topomesh
+
 
         if 'star' in triangular:
             image_triangular_topomesh = star_interface_topomesh(image_topomesh,inner_interfaces = True)
@@ -455,6 +458,8 @@ def tetrahedra_dual_triangular_topomesh(triangulation_topomesh,image_cell_vertex
         # if 'flat' in triangular:
         #     image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65),('planarization',0.1),('epidermis_planarization',0.1)]),omega_regularization_max=0.0,gradient_derivatives=None,cell_vertex_motion=False,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10,iterations_per_step=1)   
 
+        vertex_preserving = 'exact' in triangular
+
         if 'split' in triangular:
             image_triangular_topomesh = topomesh_triangle_split(image_triangular_topomesh)
         elif 'remeshed' in triangular:
@@ -470,11 +475,11 @@ def tetrahedra_dual_triangular_topomesh(triangulation_topomesh,image_cell_vertex
             while (n_flips+n_splits > image_triangular_topomesh.nb_wisps(1)/100.) and (iterations<max_iterations):
                 n_splits = property_topomesh_edge_split_optimization(image_triangular_topomesh, maximal_length=maximal_length, iterations=1)
                 n_flips = property_topomesh_edge_flip_optimization(image_triangular_topomesh,omega_energies=dict([('neighborhood',0.65)]),simulated_annealing=False,iterations=3)
-                image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.33)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=False,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10-iterations,iterations_per_step=1)
+                image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.33)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10-iterations,iterations_per_step=1)
                 iterations += 1
         
         if 'realistic' in triangular:
-            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=False,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=20,iterations_per_step=1)   
+            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=20,iterations_per_step=1)   
         elif 'regular' in triangular:
             image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65),('convexity',0.02)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=False,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=50,iterations_per_step=1)   
 
@@ -496,13 +501,13 @@ def tetrahedra_dual_triangular_topomesh(triangulation_topomesh,image_cell_vertex
                 projected_positions[v] = vertex_positions[v] + 0.5*(1-np.tanh(2.0*(surface_distance-5.0)))*(surface_distance*vertex_normals[v])
             image_triangular_topomesh.update_wisp_property('barycenter',0,array_dict([projected_positions[v] if projected_positions.has_key(v) else vertex_positions[v] for v in image_triangular_topomesh.wisps(0)],list(image_triangular_topomesh.wisps(0))))
 
-            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=False,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10,iterations_per_step=1)   
+            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10,iterations_per_step=1)   
         
         if 'flat' in triangular:
-            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65),('planarization',0.1),('epidermis_planarization',0.1)]),omega_regularization_max=0.0,gradient_derivatives=None,cell_vertex_motion=False,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10,iterations_per_step=1)   
+            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65),('planarization',0.1),('epidermis_planarization',0.1)]),omega_regularization_max=0.0,gradient_derivatives=None,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10,iterations_per_step=1)   
         elif 'straight' in triangular:
             image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65),('laplacian',0.5),('epidermis_planarization',0.1)]),omega_regularization_max=0.0,gradient_derivatives=None,cell_vertex_motion=True,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10,iterations_per_step=1)   
-            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=False,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=3,iterations_per_step=1)   
+            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=3,iterations_per_step=1)   
 
         try:
             return image_triangular_topomesh
@@ -1058,73 +1063,6 @@ def delaunay_interface_topomesh(image_topomesh,inner_interfaces=True):
     image_triangular_topomesh.update_wisp_property('barycenter',degree=0,values=triangle_vertex_positions)
     return image_triangular_topomesh
 
-
-def topomesh_triangle_split(input_topomesh):
-    from copy import deepcopy
-    from time import time
-    topomesh = deepcopy(input_topomesh)
-    
-    triangle_vertex_positions = topomesh.wisp_property('barycenter',0).to_dict()
-
-    compute_topomesh_property(topomesh,'length',1)
-    compute_topomesh_property(topomesh,'vertices',1)
-    topomesh_edges = list(topomesh.wisps(1))
-
-    compute_topomesh_property(topomesh,'borders',2)
-    compute_topomesh_property(topomesh,'vertices',2)
-    topomesh_triangles = list(topomesh.wisps(2))
-
-    start_time = time()
-    print "--> Splitting edges"
-
-    edge_splitted = {}
-    edge_middles = {}
-    for e in topomesh_edges:
-        edge_vertices = topomesh.wisp_property('vertices',1)[e]
-        mid = topomesh.add_wisp(0)
-        triangle_vertex_positions[mid] = topomesh.wisp_property('barycenter',0).values(edge_vertices).mean(axis=0)
-        topomesh.unlink(1,e,edge_vertices[1])
-        topomesh.link(1,e,mid)
-        eid = topomesh.add_wisp(1)
-        topomesh.link(1,eid,edge_vertices[1])
-        topomesh.link(1,eid,mid)
-        edge_splitted[e] = [e,eid]
-        edge_middles[e] = mid
-    end_time = time()
-    print "--> Splitting edges             [",end_time-start_time,"s]"
-
-    start_time = time()
-    print "--> Splitting triangles"
-
-    for t in topomesh_triangles:
-                
-        for e in topomesh.wisp_property('borders',2)[t]:
-            topomesh.unlink(2,t,e)
-            eid = topomesh.add_wisp(1)
-            for neighbor_edge in topomesh.wisp_property('borders',2)[t]:
-                if neighbor_edge != e:
-                    topomesh.link(1,eid,edge_middles[neighbor_edge])
-            topomesh.link(2,t,eid)
-
-            fid = topomesh.add_wisp(2)
-            topomesh.link(2,fid,eid)
-            opposite_pid = list(set(topomesh.wisp_property('vertices',2)[t]).difference(topomesh.wisp_property('vertices',1)[e]))[0]
-            
-            step_start_time = time()
-            for neighbor_edge in topomesh.wisp_property('borders',2)[t]:
-                if neighbor_edge != e:
-                    for opposite_edge in edge_splitted[neighbor_edge]:
-                        if opposite_pid in topomesh.borders(1,opposite_edge):
-                            topomesh.link(2,fid,opposite_edge)
-            for c in topomesh.regions(2,t):
-                topomesh.link(3,c,fid)
-
-    end_time = time()
-    print "--> Splitting triangles         [",end_time-start_time,"s]"
-
-    topomesh.update_wisp_property('barycenter',degree=0,values=triangle_vertex_positions)
-
-    return topomesh
 
 
 

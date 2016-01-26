@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 # -*- python -*-
 #
-#       PropertyTopomesh
+#       DRACO-STEM
+#       Dual Reconstruction by Adjacency Complex Optimization
+#       SAM Tissue Enhanced Mesh
 #
 #       Copyright 2015-2016 INRIA - CIRAD - INRA
 #
@@ -179,11 +181,9 @@ def evaluate_topomesh_quality(topomesh,quality_criteria=["Mesh Complexity","Tria
             image_cell_vertex = array_dict(np.array([image_cell_vertex[tuple(vertex)] for vertex in img_cell_vertex]),np.sort(img_cell_vertex))
         else:
             image_cell_vertex = deepcopy(image_cell_vertex)
-        for v in image_cell_vertex.keys():
-            image_cell_vertex[v] = image_cell_vertex[v]*np.array(image.resolution)
+        # for v in image_cell_vertex.keys():
+        #     image_cell_vertex[v] = image_cell_vertex[v]*np.array(image.resolution)
     
-
-
         image_cell_vertices = np.array(image_cell_vertex.values())
         vertex_distances_mesh = array_dict(vq(mesh_cell_vertices[np.where(1-np.isnan(mesh_cell_vertices)[:,0])]*image.resolution,image_cell_vertices*image.resolution)[1],cell_vertex)
         vertex_distances_image = vq(image_cell_vertices[np.where(1-np.isnan(image_cell_vertices)[:,0])],mesh_cell_vertices)[1]

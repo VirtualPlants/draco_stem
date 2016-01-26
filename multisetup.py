@@ -46,10 +46,12 @@ except ImportError:
 
 
 dirs = [
+    "cellcomplex",
     "mesh",
     "draco_stem",
+#    "cgal_meshing",
 ]
-# "tissue_analysis",
+
 
 
 def main():

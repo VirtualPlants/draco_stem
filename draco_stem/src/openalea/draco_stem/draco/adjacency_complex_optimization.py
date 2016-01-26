@@ -649,7 +649,7 @@ def tetrahedrization_clean_surface(triangulation_topomesh, image_cell_vertex=Non
 
     if surface_topomesh is None and binary_image is not None:
         from openalea.mesh.utils.implicit_surfaces import implicit_surface_topomesh
-        from openalea.mesh.property_topomesh_optimization import optimize_topomesh
+        from openalea.draco_stem.stem.tissue_mesh_optimization import optimize_topomesh
         
         grid_resolution = kwargs.get('grid_resolution',[8,8,8])
         grid_binary_image = binary_image[0:binary_image.shape[0]:grid_resolution[0],0:binary_image.shape[1]:grid_resolution[1],0:binary_image.shape[2]:grid_resolution[2]]

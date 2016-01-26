@@ -1,0 +1,37 @@
+# -*-python-*-
+
+import os
+bn = os.path.basename
+
+Import( "env" )
+
+lib_env = env.Clone()
+
+#lib_env.EnableQt4Modules(['QtCore','QtOpenGL', 'QtGui'])
+
+LINKFLAGS = list( lib_env['LINKFLAGS'] )
+# Import/Export symbols for windows
+if lib_env['compiler'] == 'mingw':
+    LINKFLAGS=["-enable-stdcall-fixup",
+               "-enable-auto-import",
+               "-enable-runtime-pseudo-reloc",
+               "-s"]
+    lib_env.AppendUnique(LINKFLAGS=LINKFLAGS)
+else:
+    LINKFLAGS.extend(['-frounding-math'])  
+    lib_env.AppendUnique(LINKFLAGS=LINKFLAGS)
+
+includes= lib_env.ALEAGlob('*.h')
+sources = lib_env.ALEAGlob('*.cpp')
+
+
+
+# Add defines to export symbols on Windows
+#lib_env.AppendUnique(CPPDEFINES=['MESSAGE'])
+#lib_env.AppendUnique(LIBS=[''])
+lib_env.AppendUnique(LIBS=['CGAL','CGAL_ImageIO','gmp','mpfr'])
+
+inc = lib_env.ALEAIncludes( 'cgal_meshing', includes )
+lib = lib_env.ALEALibrary( 'cgal_meshing', sources )
+
+#exe = lib_env.ALEAProgram('meshing', 'main.cpp', LIBS='meshing')

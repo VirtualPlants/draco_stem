@@ -383,7 +383,6 @@ class TopomeshControlPanel(QtGui.QWidget, AbstractListener):
                     property_name = world_object['property_name_'+str(display_degree)]
                     property_degree = world_object['property_degree_'+str(display_degree)]
                     mesh_element_matching = self._mesh_matching[world_object.name][display_degree][property_degree]
-                    print mesh_element_matching
                     if topomesh.has_wisp_property(property_name,property_degree):
                         property_data = array_dict(topomesh.wisp_property(property_name,property_degree).values(mesh_element_matching.values()),mesh_element_matching.keys())
                     else:
