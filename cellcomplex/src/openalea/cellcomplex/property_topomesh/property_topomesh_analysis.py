@@ -679,24 +679,52 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,**k
                 compute_topomesh_property(topomesh,'barycenter',2)
             if not topomesh.has_wisp_property('barycenter',degree=3,is_computed=True):
                 compute_topomesh_property(topomesh,'barycenter',3)
-            vertices_positions = positions.values(topomesh.wisp_property('vertices',degree).values(list(topomesh.wisps(degree))))
-
-            normal_vectors = np.cross(vertices_positions[:,1]-vertices_positions[:,0],vertices_positions[:,2]-vertices_positions[:,0])
             
-            # reversed_normals = np.where(normal_vectors[:,2] < 0)[0]
-            
-            from openalea.cellcomplex.property_topomesh.utils.implicit_surfaces import point_spherical_density
-            object_positions = kwargs.get('object_positions',topomesh.wisp_property('barycenter',3))
-            object_radius = kwargs.get('object_radius',10.)
-            triangle_epidermis = topomesh.wisp_property('epidermis',2).values()
+            try:
+                if 1 in topomesh.wisps(3):
+                    surface = True
+                else:
+                    surface = False
+                    topomesh.add_wisp(3,1)
+                    for t in topomesh.wisps(2):
+                        topomesh.link(3,1,t)
 
-            triangle_exterior_density = point_spherical_density(object_positions,topomesh.wisp_property('barycenter',2).values()[triangle_epidermis]+normal_vectors[triangle_epidermis],sphere_radius=object_radius,k=0.5)
-            triangle_interior_density = point_spherical_density(object_positions,topomesh.wisp_property('barycenter',2).values()[triangle_epidermis]-normal_vectors[triangle_epidermis],sphere_radius=object_radius,k=0.5)
-            normal_orientation = 2*(triangle_exterior_density<triangle_interior_density)-1
-            normal_vectors[triangle_epidermis] = normal_orientation[...,np.newaxis]*normal_vectors[triangle_epidermis]
-            normal_norms = np.linalg.norm(normal_vectors,axis=1)
-            # normal_norms[np.where(normal_norms==0)] = 0.001
-            topomesh.update_wisp_property('normal',degree=degree,values=normal_vectors/normal_norms[:,np.newaxis],keys=np.array(list(topomesh.wisps(degree))))
+                compute_topomesh_property(topomesh,'oriented_borders',2)
+                compute_topomesh_property(topomesh,'oriented_borders',3)
+
+                triangle_orientations = array_dict(topomesh.wisp_property('oriented_borders',3)[1][1],topomesh.wisp_property('oriented_borders',3)[1][0])
+                topomesh.update_wisp_property('orientation',2,triangle_orientations.values(list(topomesh.wisps(2))),list(topomesh.wisps(2)))
+                if not surface:
+                    topomesh.remove_wisp(3,1)
+
+                compute_topomesh_property(topomesh,'oriented_vertices',2)
+                vertices_positions = topomesh.wisp_property('barycenter',0).values(topomesh.wisp_property('oriented_vertices',2).values())
+                normal_vectors = np.cross(vertices_positions[:,1]-vertices_positions[:,0],vertices_positions[:,2]-vertices_positions[:,0])
+                normal_norms = np.linalg.norm(normal_vectors,axis=1)
+                normal_orientations = topomesh.wisp_property('orientation',2).values()
+
+                face_vectors = vertices_positions.mean(axis=1) - topomesh.wisp_property('barycenter',0).values().mean(axis=0)
+                global_normal_orientation = np.sign(np.einsum("...ij,...ij->...i",normal_orientations[:,np.newaxis]*normal_vectors,face_vectors).mean())
+                topomesh.update_wisp_property('normal',2,global_normal_orientation*normal_orientations[:,np.newaxis]*normal_vectors/normal_norms[:,np.newaxis],list(topomesh.wisps(2)))
+
+            except:
+                vertices_positions = positions.values(topomesh.wisp_property('vertices',degree).values(list(topomesh.wisps(degree))))
+                normal_vectors = np.cross(vertices_positions[:,1]-vertices_positions[:,0],vertices_positions[:,2]-vertices_positions[:,0])
+                
+                # reversed_normals = np.where(normal_vectors[:,2] < 0)[0]
+            
+                from openalea.cellcomplex.property_topomesh.utils.implicit_surfaces import point_spherical_density
+                object_positions = kwargs.get('object_positions',topomesh.wisp_property('barycenter',3))
+                object_radius = kwargs.get('object_radius',10.)
+                triangle_epidermis = topomesh.wisp_property('epidermis',2).values()
+
+                triangle_exterior_density = point_spherical_density(object_positions,topomesh.wisp_property('barycenter',2).values()[triangle_epidermis]+normal_vectors[triangle_epidermis],sphere_radius=object_radius,k=0.5)
+                triangle_interior_density = point_spherical_density(object_positions,topomesh.wisp_property('barycenter',2).values()[triangle_epidermis]-normal_vectors[triangle_epidermis],sphere_radius=object_radius,k=0.5)
+                normal_orientation = 2*(triangle_exterior_density<triangle_interior_density)-1
+                normal_vectors[triangle_epidermis] = normal_orientation[...,np.newaxis]*normal_vectors[triangle_epidermis]
+                normal_norms = np.linalg.norm(normal_vectors,axis=1)
+                # normal_norms[np.where(normal_norms==0)] = 0.001
+                topomesh.update_wisp_property('normal',degree=degree,values=normal_vectors/normal_norms[:,np.newaxis],keys=np.array(list(topomesh.wisps(degree))))
         
 
         elif degree == 0:

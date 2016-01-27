@@ -52,8 +52,6 @@ dirs = [
 #    "cgal_meshing",
 ]
 
-
-
 def main():
 
     args = sys.argv[1:]

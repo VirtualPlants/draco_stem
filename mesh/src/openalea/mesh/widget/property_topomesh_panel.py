@@ -365,8 +365,9 @@ class TopomeshControlPanel(QtGui.QWidget, AbstractListener):
 
                     if self.world.has_key(world_object.name+"_"+self.element_names[display_degree]):
                         kwargs = world_kwargs(self.world[world_object.name+"_"+self.element_names[display_degree]])
-                        if kwargs.has_key('intensity_range'):
-                            kwargs.pop('intensity_range')
+                        if not 'coef_' in attribute['name']:
+                            if kwargs.has_key('intensity_range'):
+                                kwargs.pop('intensity_range')
                     else:
                         kwargs = {}
                         kwargs['colormap'] = 'glasbey' if (property_name == '') else self.property_colormaps.get(property_name,'grey')

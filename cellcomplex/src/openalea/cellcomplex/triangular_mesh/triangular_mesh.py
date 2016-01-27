@@ -77,39 +77,77 @@ class TriangularMesh(object):
 
         if len(self.triangles) > 0:
             vtk_mesh = vtk.vtkPolyData()
+            
             vtk_points = vtk.vtkPoints()
             vtk_point_data = vtk.vtkDoubleArray()
+            
             vtk_triangles = vtk.vtkCellArray()
             vtk_triangle_data = vtk.vtkDoubleArray()
             
-            mesh_points = []
-            for p in self.points.keys():
-                pid = vtk_points.InsertNextPoint(self.points[p])
-                mesh_points.append(pid)
-                if self.point_data.has_key(p):
-                    if isiterable(self.point_data[p]):
-                        vtk_point_data.InsertValue(pid,self.point_data[p][0])
-                    else:
-                        vtk_point_data.InsertValue(pid,self.point_data[p])
-            mesh_points = array_dict(mesh_points,self.points.keys())
-            if len(self.point_data) > 0:
-                vtk_mesh.GetPointData().SetScalars(vtk_point_data)
+            if len(self.triangle_data)>0 and np.array(self.triangle_data.values()).ndim > 1:
+                if np.array(self.triangle_data.values()).ndim==2:
+                    vtk_point_data.SetNumberOfComponents(np.array(self.triangle_data.values()).shape[1])
+                elif np.array(self.triangle_data.values()).ndim==3:
+                    vtk_point_data.SetNumberOfComponents(np.array(self.triangle_data.values()).shape[1]*np.array(self.triangle_data.values()).shape[2])
+                
+                mesh_points = []
+                positions = array_dict(self.points)
+                for t in self.triangles.keys():
+                    triangle_center = positions.values(self.triangles[t]).mean(axis=0)
+                    tid = vtk_points.InsertNextPoint(triangle_center)
+                    mesh_points.append(tid)
 
-            for t in self.triangles.keys():
-                poly = vtk_triangles.InsertNextCell(3)
-                for i in xrange(3):
-                    vtk_triangles.InsertCellPoint(mesh_points[self.triangles[t][i]])
-                if self.triangle_data.has_key(t):
-                    if isiterable(self.triangle_data[t]):
-                        vtk_triangle_data.InsertValue(poly,self.triangle_data[t][0])
-                    else:
-                        vtk_triangle_data.InsertValue(poly,self.triangle_data[t])
-            vtk_mesh.SetPoints(vtk_points)
-            vtk_mesh.SetPolys(vtk_triangles)
-            if len(self.triangle_data) > 0:
-                vtk_mesh.GetCellData().SetScalars(vtk_triangle_data)
-            
+                    if self.triangle_data.has_key(t):
+                        if isiterable(self.triangle_data[t]):
+                            if np.array(self.triangle_data[t]).ndim==1:
+                                vtk_point_data.InsertTuple(tid,self.triangle_data[t])
+                            else:
+                                vtk_point_data.InsertTuple(tid,np.concatenate(self.triangle_data[t]))
+                mesh_points = array_dict(mesh_points,self.triangles.keys())
+                
+                vtk_mesh.SetPoints(vtk_points)
+
+                if np.array(self.triangle_data.values()).ndim==2:
+                    vtk_mesh.GetPointData().SetVectors(vtk_point_data)
+                elif np.array(self.triangle_data.values()).ndim==3:
+                    vtk_mesh.GetPointData().SetTensors(vtk_point_data)
+
+            else:
+
+                mesh_points = []
+                for p in self.points.keys():
+                    pid = vtk_points.InsertNextPoint(self.points[p])
+                    mesh_points.append(pid)
+                    if self.point_data.has_key(p):
+                        if isiterable(self.point_data[p]):
+                            vtk_point_data.InsertValue(pid,self.point_data[p][0])
+                        else:
+                            vtk_point_data.InsertValue(pid,self.point_data[p])
+                mesh_points = array_dict(mesh_points,self.points.keys())
+                if len(self.point_data) > 0:
+                    vtk_mesh.GetPointData().SetScalars(vtk_point_data)
+
+                for t in self.triangles.keys():
+                    poly = vtk_triangles.InsertNextCell(3)
+                    for i in xrange(3):
+                        vtk_triangles.InsertCellPoint(mesh_points[self.triangles[t][i]])
+                    if self.triangle_data.has_key(t):
+                        if isiterable(self.triangle_data[t]):
+                            if np.array(self.triangle_data[t]).ndim==1:
+                                vtk_triangle_data.InsertTuple(poly,self.triangle_data[t])
+                            else:
+                                vtk_triangle_data.InsertTuple(poly,np.concatenate(self.triangle_data[t]))
+                            # vtk_triangle_data.InsertValue(poly,self.triangle_data[t][0])
+                        else:
+                            vtk_triangle_data.InsertValue(poly,self.triangle_data[t])
+                vtk_mesh.SetPoints(vtk_points)
+                vtk_mesh.SetPolys(vtk_triangles)
+
+                if len(self.triangle_data) > 0:
+                    vtk_mesh.GetCellData().SetScalars(vtk_triangle_data)
+
             return vtk_mesh
+
         elif len(self.edges) > 0:
             vtk_mesh = vtk.vtkPolyData()
             vtk_points = vtk.vtkPoints()
@@ -275,6 +313,7 @@ def topomesh_to_triangular_mesh(topomesh, degree=3, coef=1.0, mesh_center=None, 
             triangle_vertices = array_dict(triangle_vertices,np.arange(len(cell_triangles)))
             triangle_topomesh_cells = array_dict(triangle_topomesh_cells,np.arange(len(cell_triangles)))
             triangle_topomesh_triangles = array_dict(cell_triangles,np.arange(len(cell_triangles)))
+        edge_topomesh_edges = {}
 
         triangular_mesh.points = vertices_positions.to_dict()
         triangular_mesh.triangles = triangle_vertices.to_dict()
@@ -315,6 +354,8 @@ def topomesh_to_triangular_mesh(topomesh, degree=3, coef=1.0, mesh_center=None, 
             triangle_vertices = array_dict(triangle_vertices,np.arange(len(cell_triangles)))
             triangle_topomesh_cells = array_dict(triangle_topomesh_cells,np.arange(len(cell_triangles)))
             triangle_topomesh_triangles = array_dict(cell_triangles,np.arange(len(cell_triangles)))
+        edge_topomesh_edges = {}
+
         triangular_mesh.points = vertices_positions.to_dict()
         triangular_mesh.triangles = triangle_vertices.to_dict()
         if property_name is not None:
@@ -342,6 +383,7 @@ def topomesh_to_triangular_mesh(topomesh, degree=3, coef=1.0, mesh_center=None, 
                 triangular_mesh.edge_data = topomesh.wisp_property(property_name,property_degree).to_dict()
         triangle_topomesh_cells = {}
         triangle_topomesh_triangles = {}
+        edge_topomesh_edges = dict(zip(triangular_mesh.edges.keys(),triangular_mesh.edges.keys()))
         vertices_topomesh_vertices = {}
 
     elif degree == 0:
@@ -353,11 +395,12 @@ def topomesh_to_triangular_mesh(topomesh, degree=3, coef=1.0, mesh_center=None, 
                 triangular_mesh.point_data = topomesh.wisp_property(property_name,property_degree).to_dict()
         triangle_topomesh_cells = {}
         triangle_topomesh_triangles = {}
+        edge_topomesh_edges = {}
         vertices_topomesh_vertices = dict(zip(triangular_mesh.points.keys(),triangular_mesh.points.keys()))
 
     mesh_element_matching = {}
     mesh_element_matching[0] = vertices_topomesh_vertices
-    mesh_element_matching[1] = None
+    mesh_element_matching[1] = edge_topomesh_edges
     mesh_element_matching[2] = triangle_topomesh_triangles
     mesh_element_matching[3] = triangle_topomesh_cells
 

@@ -1,1 +1,3 @@
+import openalea.cellcomplex.property_topomesh.property_topomesh_creation
+reload(openalea.cellcomplex.property_topomesh.property_topomesh_creation)
 from openalea.cellcomplex.property_topomesh.property_topomesh_creation import *

@@ -12,12 +12,12 @@ import openalea.draco_stem.draco.draco
 reload(openalea.draco_stem.draco.draco)
 from openalea.draco_stem.draco.draco import DracoMesh
 
-#world.clear()
+world.clear()
 
 import vplants.meshing_data
-#filename = "p194-t3_imgSeg_SegExp_CellShapeCorr"
+filename = "p194-t5_imgSeg_SegExp_CellShapeCorr"
 #filename = "rs01_wt_t00_seg"
-filename = "segmentation"
+#filename = "segmentation"
 dirname = shared_data(vplants.meshing_data)
 meshing_dirname =  dirname.parent.parent
 
@@ -38,7 +38,7 @@ world.add(draco.point_topomesh,'image_cells')
 raw_input()
 
 #draco.delaunay_adjacency_complex()
-#draco.layer_adjacency_complex('L1')
+draco.layer_adjacency_complex('L1')
 #draco.construct_adjacency_complex()
 #draco.adjacency_complex_optimization(n_iterations=1)
 world.add(draco.triangulation_topomesh,'cell_adjacency_complex')
@@ -47,13 +47,12 @@ raw_input()
 from openalea.mesh.property_topomesh_io import save_property_topomesh
 save_property_topomesh(draco.triangulation_topomesh,triangulation_file,original_pids=True)
 
-#triangular = ['star','remeshed','projected','straight']
+triangular = ['star','remeshed','projected','straight']
 #triangular = ['star','remeshed','projected','flat']
 #triangular = ['star','remeshed','projected','exact','flat']
-triangular= ['star','flat']
-image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3)
+#triangular= ['star','flat']
+image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=2)
 #image_dual_topomesh = draco.draco_topomesh(reconstruction_triangulation = triangular)
-
 
 triangular_string = ""
 for t in triangular:
