@@ -31,9 +31,33 @@ import os
 import sys
 import pickle
 
-def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,**kwargs):
-    """
-    Compute a property of a PropertyTopomesh
+def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,object_positions=None,object_radius=10.):
+    """Compute a property of a PropertyTopomesh
+
+    The function compute and fills a property of a PropertyTopomesh passed as argument. The given
+    property is computed for all elements of the specified degree and stored as a dictionary in
+    the PropertyTopomesh structure
+
+    :Parameters:
+        - 'topomesh' (PropertyTopomesh) - the structure on which to compute the property
+        - 'property_name' (string) - the name of the property to compute, among the following ones:
+            * 'barycenter' (degree : [0, 1, 2, 3]) : the position of the center of the element
+            * 'vertices' (degree : [0, 1, 2, 3])
+            * 'triangles' (degree : [0, 1, 2, 3])
+            * 'cells' (degree : [0, 1, 2, 3])
+            * 'length' (degree : [1])
+            * 'area' (degree : [2])
+            * 'volume' (degree : [3])
+            * 'normal' (degree : [0, 2])
+        - 'degree' (int) - the degree of the elements on which to compute the property
+        - 'positions' (dict) - [optional] a position dictionary if ('barycenter',0) is empty
+        - 'object_positions' (dict) - [optional] position of the object(s) reprensented by the mesh
+            * used only for property ('normal',2)
+        - 'object_radius' (float) - [optional] radius of the object(s) represented by the mesh
+            * used only for property ('normal',2)
+
+        :Returns:
+            None - PropertyTopomesh passed as argument is updated
     """
 
     if positions is None:
@@ -714,8 +738,8 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,**k
                 # reversed_normals = np.where(normal_vectors[:,2] < 0)[0]
             
                 from openalea.cellcomplex.property_topomesh.utils.implicit_surfaces import point_spherical_density
-                object_positions = kwargs.get('object_positions',topomesh.wisp_property('barycenter',3))
-                object_radius = kwargs.get('object_radius',10.)
+                if object_positions is None:
+                    object_positions = topomesh.wisp_property('barycenter',3))
                 triangle_epidermis = topomesh.wisp_property('epidermis',2).values()
 
                 triangle_exterior_density = point_spherical_density(object_positions,topomesh.wisp_property('barycenter',2).values()[triangle_epidermis]+normal_vectors[triangle_epidermis],sphere_radius=object_radius,k=0.5)
