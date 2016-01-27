@@ -739,7 +739,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,obj
             
                 from openalea.cellcomplex.property_topomesh.utils.implicit_surfaces import point_spherical_density
                 if object_positions is None:
-                    object_positions = topomesh.wisp_property('barycenter',3))
+                    object_positions = topomesh.wisp_property('barycenter',3)
                 triangle_epidermis = topomesh.wisp_property('epidermis',2).values()
 
                 triangle_exterior_density = point_spherical_density(object_positions,topomesh.wisp_property('barycenter',2).values()[triangle_epidermis]+normal_vectors[triangle_epidermis],sphere_radius=object_radius,k=0.5)
