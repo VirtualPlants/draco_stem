@@ -86,8 +86,8 @@ def save_property_topomesh(topomesh, path, cells_to_save=None, properties_to_sav
 
     wisps_to_save = {}
     wisps_to_save[0] = vertices_to_save
-    wisps_to_save[1] = triangles_to_save
-    wisps_to_save[2] = edges_to_save
+    wisps_to_save[1] = edges_to_save
+    wisps_to_save[2] = triangles_to_save
     wisps_to_save[3] = cells_to_save
 
     wisps_to_wids = {}
@@ -105,7 +105,8 @@ def save_property_topomesh(topomesh, path, cells_to_save=None, properties_to_sav
         for property_name in properties_to_save[degree]:
             print "Property ",property_name,'(',degree,')'
             if topomesh.has_wisp_property(property_name,degree=degree,is_computed=True):
-                sub_topomesh.update_wisp_property(property_name,degree,array_dict(topomesh.wisp_property(property_name,degree).values(wisps_to_save[degree]),array_dict(wisps_to_wids[degree]).values(wisps_to_save[degree])))
+                wids_to_save = array_dict(wisps_to_wids[degree]).values(wisps_to_save[degree])
+                sub_topomesh.update_wisp_property(property_name,degree,array_dict(topomesh.wisp_property(property_name,degree).values(wisps_to_save[degree]),wids_to_save))
 
     pickle.dump(sub_topomesh,open(path,"wb"))
 
@@ -421,6 +422,7 @@ def read_ply_property_topomesh(ply_filename):
     property_types['float'] = 'float'
     property_types['float32'] = 'float'
     property_types['list'] = 'list'
+    property_types['tensor'] = 'tensor'
 
     ply_file = open(ply_filename,'rb')
     assert "ply" in ply_file.next()
@@ -430,6 +432,7 @@ def read_ply_property_topomesh(ply_filename):
     properties = {}
     properties_types = {}
     properties_list_types = {}
+    properties_tensor_dims = {}
     element_name = ""
     property_name = ""
     elements = []
@@ -443,6 +446,7 @@ def read_ply_property_topomesh(ply_filename):
             properties[element_name] = []
             properties_types[element_name] = {}
             properties_list_types[element_name] = {}
+            properties_tensor_dims[element_name] = {}
             
         if re.split(' ',line)[0] == 'property':
             property_name = re.split(' ',line)[-1][:-1]
@@ -451,10 +455,15 @@ def read_ply_property_topomesh(ply_filename):
             if properties_types[element_name][property_name] == 'list':
                 list_type = re.split(' ',line)[-2]
                 properties_list_types[element_name][property_name] = list_type
+            elif properties_types[element_name][property_name] == 'tensor':
+                properties_tensor_dims[element_name][property_name] = (np.array(re.split(' ',line))[:-2]=='int').sum()
+                list_type = re.split(' ',line)[-2]
+                properties_list_types[element_name][property_name] = list_type
         
         line = ply_file.next()
     print n_wisps
     print properties
+    print properties_list_types
 
     element_properties = {}
 
@@ -481,6 +490,14 @@ def read_ply_property_topomesh(ply_filename):
                     elif property_types[list_type] == 'int':
                         line_props[prop] = [int(p) for p in re.split(' ',line)[prop_index:prop_index+list_length]]
                     prop_index += list_length
+                elif property_types[prop_type] == 'tensor':
+                    n_dims = properties_tensor_dims[element_name][property_name]
+                    tensor_dims = tuple(np.array(re.split(' ',line)[prop_index:prop_index+n_dims]).astype(int))
+                    prop_index += n_dims
+                    list_type =  properties_list_types[element_name][prop]
+                    line_props[prop] = np.array(re.split(' ',line)[prop_index:prop_index+np.prod(tensor_dims)]).astype(property_types[list_type]).reshape(tensor_dims)
+                    prop_index += np.prod(tensor_dims)
+
             element_properties[element_name][wid] = line_props
     ply_file.close()
 

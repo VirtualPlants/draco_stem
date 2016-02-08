@@ -43,6 +43,7 @@ from openalea.mesh.utils.geometry_tools import tetra_geometric_features, triangl
 
 from sys                                    import argv
 from time                                   import time, sleep
+from copy                                   import deepcopy
 
 tetra_triangle_edge_list  = np.array([[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]])
 tetra_triangle_list  = np.array([[0,1,2],[0,1,3],[0,2,3],[1,2,3]])
@@ -615,10 +616,13 @@ def delaunay_tetrahedrization_topomesh(positions, image_cell_vertex=None, **kwar
         return tetrahedrization_clean_surface(triangulation_topomesh, image_cell_vertex=image_cell_vertex, **kwargs)
 
 
-def tetrahedrization_clean_surface(triangulation_topomesh, image_cell_vertex=None, **kwargs):
+def tetrahedrization_clean_surface(initial_triangulation_topomesh, image_cell_vertex=None, **kwargs):
+    
+    triangulation_topomesh = deepcopy(initial_triangulation_topomesh)
+
     positions = triangulation_topomesh.wisp_property('barycenter',0)
 
-    compute_tetrahedrization_geometrical_properties(triangulation_topomesh)
+    compute_tetrahedrization_geometrical_properties(triangulation_topomesh, normals=False)
 
     segmented_image = kwargs.get('segmented_image',None)
     binary_image = kwargs.get('binary_image',None)
@@ -629,6 +633,7 @@ def tetrahedrization_clean_surface(triangulation_topomesh, image_cell_vertex=Non
         binary_image[size[0]/2:3*size[0]/2,size[1]/2:3*size[1]/2,size[2]/2:3*size[2]/2][segmented_image>1] = 1
 
     if binary_image is not None:
+        size = np.array(binary_image.shape)
         resolution = np.array(binary_image.resolution)
         point_radius = 0.6
         image_neighborhood = np.array(np.ceil(point_radius/np.array(binary_image.resolution)),int)
@@ -658,6 +663,7 @@ def tetrahedrization_clean_surface(triangulation_topomesh, image_cell_vertex=Non
         surface_topomesh.update_wisp_property('barycenter',0,surface_topomesh.wisp_property('barycenter',0).values()+np.array(grid_binary_image.shape)*resolution*grid_resolution/4.)
         surface_topomesh = optimize_topomesh(surface_topomesh,omega_forces=dict(taubin_smoothing=0.65,neighborhood=1.0),edge_flip=True,iterations=10,iteration_per_step=2)
 
+
     surface_cleaning_criteria = kwargs.get('surface_cleaning_criteria',['surface','exterior','distance','sliver'])
     if surface_topomesh is None:
         if 'surface' in surface_cleaning_criteria:
@@ -666,13 +672,13 @@ def tetrahedrization_clean_surface(triangulation_topomesh, image_cell_vertex=Non
         if 'exterior' in surface_cleaning_criteria:
             surface_cleaning_criteria.remove('exterior')
 
-    compute_tetrahedrization_geometrical_properties(triangulation_topomesh)
+    compute_tetrahedrization_geometrical_properties(triangulation_topomesh, normals=False)
 
     triangulation_triangle_edges = triangulation_topomesh.wisp_property('borders',2).values()
 
     if 'exterior' in surface_cleaning_criteria or 'surface' in surface_cleaning_criteria:
         triangulation_edge_points = triangulation_topomesh.wisp_property('barycenter',0).values(triangulation_topomesh.wisp_property('vertices',1).values())
-
+        compute_topomesh_property(surface_topomesh,'vertices',2)
         surface_triangle_points = surface_topomesh.wisp_property('barycenter',0).values(surface_topomesh.wisp_property('vertices',2).values())
 
     if 'exterior' in surface_cleaning_criteria:
@@ -707,7 +713,7 @@ def tetrahedrization_clean_surface(triangulation_topomesh, image_cell_vertex=Non
         triangulation_topomesh.update_wisp_property('eccentricity',3,triangulation_tetrahedra_eccentricities.values(list(triangulation_topomesh.wisps(3))),list(triangulation_topomesh.wisps(3)))    
         triangulation_triangle_sliver = array_dict(map(np.mean,triangulation_tetrahedra_eccentricities.values(triangulation_topomesh.wisp_property('cells',2).values())),list(triangulation_topomesh.wisps(2)))
 
-        maximal_eccentricity = 0.95
+        maximal_eccentricity = kwargs.get('maximal_eccentricity',0.95)
 
     # triangulation_topomesh_triangle_to_delete = np.zeros_like(list(triangulation_topomesh.wisps(2)),bool)
     # if 'surface' in surface_cleaning_criteria:
@@ -742,6 +748,9 @@ def tetrahedrization_clean_surface(triangulation_topomesh, image_cell_vertex=Non
         
         if 'sliver' in surface_cleaning_criteria:
             triangulation_triangle_sliver = array_dict(map(np.mean,triangulation_tetrahedra_eccentricities.values(triangulation_topomesh.wisp_property('cells',2).values())),list(triangulation_topomesh.wisps(2)))
+            # surface_faces = np.array(list(triangulation_topomesh.wisps(2)))[np.array([len(list(triangulation_topomesh.regions(2,t)))==1 for t in triangulation_topomesh.wisps(2)])]
+            # print (triangulation_triangle_sliver.values(surface_faces) > maximal_eccentricity).sum(), "(",maximal_eccentricity,")"
+            # raw_input()
 
         triangles_to_delete = set()
 
@@ -1423,7 +1432,7 @@ def compute_tetrahedrization_topological_properties(triangulation_topomesh):
     compute_topomesh_property(triangulation_topomesh,'triangles',3)
 
 
-def compute_tetrahedrization_geometrical_properties(triangulation_topomesh):
+def compute_tetrahedrization_geometrical_properties(triangulation_topomesh, normals=True):
 
     compute_tetrahedrization_topological_properties(triangulation_topomesh)
 
@@ -1432,14 +1441,15 @@ def compute_tetrahedrization_geometrical_properties(triangulation_topomesh):
         
     positions = triangulation_topomesh.wisp_property('barycenter',0)
 
-    compute_topomesh_property(triangulation_topomesh,'normal',2)
-    compute_topomesh_property(triangulation_topomesh,'barycenter',2)
-    triangulation_triangle_exterior_density = point_spherical_density(positions,triangulation_topomesh.wisp_property('barycenter',2).values()+triangulation_topomesh.wisp_property('normal',2).values(),sphere_radius=10.,k=0.5)
-    triangulation_triangle_interior_density = point_spherical_density(positions,triangulation_topomesh.wisp_property('barycenter',2).values()-triangulation_topomesh.wisp_property('normal',2).values(),sphere_radius=10,k=0.5)
-    normal_orientation = 2*(triangulation_triangle_exterior_density<triangulation_triangle_interior_density)-1
-    triangulation_topomesh.update_wisp_property('normal',2,normal_orientation[...,np.newaxis]*triangulation_topomesh.wisp_property('normal',2).values(),list(triangulation_topomesh.wisps(2)))
+    if normals:
+        compute_topomesh_property(triangulation_topomesh,'normal',2)
+        compute_topomesh_property(triangulation_topomesh,'barycenter',2)
+        triangulation_triangle_exterior_density = point_spherical_density(positions,triangulation_topomesh.wisp_property('barycenter',2).values()+triangulation_topomesh.wisp_property('normal',2).values(),sphere_radius=10.,k=0.5)
+        triangulation_triangle_interior_density = point_spherical_density(positions,triangulation_topomesh.wisp_property('barycenter',2).values()-triangulation_topomesh.wisp_property('normal',2).values(),sphere_radius=10,k=0.5)
+        normal_orientation = 2*(triangulation_triangle_exterior_density<triangulation_triangle_interior_density)-1
+        triangulation_topomesh.update_wisp_property('normal',2,normal_orientation[...,np.newaxis]*triangulation_topomesh.wisp_property('normal',2).values(),list(triangulation_topomesh.wisps(2)))
 
-    compute_topomesh_property(triangulation_topomesh,'normal',0)
+        compute_topomesh_property(triangulation_topomesh,'normal',0)
 
     tetra_features = tetra_geometric_features(triangulation_topomesh.wisp_property('vertices',3).values(),positions,features=['max_distance','eccentricity','min_dihedral_angle','max_dihedral_angle'])
 

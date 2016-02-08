@@ -31,7 +31,7 @@ import os
 import sys
 import pickle
 
-def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,object_positions=None,object_radius=10.):
+def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,normal_method="orientation",object_positions=None,object_radius=10.):
     """Compute a property of a PropertyTopomesh
 
     The function compute and fills a property of a PropertyTopomesh passed as argument. The given
@@ -704,7 +704,8 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,obj
             if not topomesh.has_wisp_property('barycenter',degree=3,is_computed=True):
                 compute_topomesh_property(topomesh,'barycenter',3)
             
-            try:
+
+            if normal_method == "orientation":
                 if 1 in topomesh.wisps(3):
                     surface = True
                 else:
@@ -731,7 +732,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,obj
                 global_normal_orientation = np.sign(np.einsum("...ij,...ij->...i",normal_orientations[:,np.newaxis]*normal_vectors,face_vectors).mean())
                 topomesh.update_wisp_property('normal',2,global_normal_orientation*normal_orientations[:,np.newaxis]*normal_vectors/normal_norms[:,np.newaxis],list(topomesh.wisps(2)))
 
-            except:
+            elif normal_method == "density":
                 vertices_positions = positions.values(topomesh.wisp_property('vertices',degree).values(list(topomesh.wisps(degree))))
                 normal_vectors = np.cross(vertices_positions[:,1]-vertices_positions[:,0],vertices_positions[:,2]-vertices_positions[:,0])
                 

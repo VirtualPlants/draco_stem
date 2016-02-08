@@ -444,7 +444,6 @@ def save_ply_triangular_mesh(mesh,ply_filename,intensity_range=None):
             triangle_data = array_dict(np.array(mesh.triangle_data.values(),int)%256,mesh.triangle_data.keys())
         else:
             triangle_data = array_dict((np.array(mesh.triangle_data.values())-intensity_range[0])/(intensity_range[1]-intensity_range[0]),mesh.triangle_data.keys())
-
     ply_file.write("end_header\n")
 
     vertex_index = {}
@@ -475,4 +474,134 @@ def save_ply_triangular_mesh(mesh,ply_filename,intensity_range=None):
 
     end_time = time()
     print "<-- Saving .ply        [",end_time-start_time,"s]"
+
+
+
+def save_ply_triangle_mesh(ply_filename, positions, triangles={}, edges={}, vertex_properties={}, triangle_properties={}, edge_properties={}):
+    """
+    """
+
+    from time import time
+
+    if isinstance(positions,list) or isinstance(positions,np.ndarray):
+        positions = dict(zip(range(len(positions)),positions))
+    if isinstance(triangles,list) or isinstance(triangles,np.ndarray):
+        triangles = dict(zip(range(len(triangles)),triangles))
+    if isinstance(edges,list) or isinstance(edges,np.ndarray):
+        edges = dict(zip(range(len(edges)),edges))
+
+
+    property_types = {}
+    property_types['bool'] = "int"
+    property_types['int'] = "int"
+    property_types['int32'] = "int"
+    property_types['int64'] = "int"
+    property_types['float'] = "float"
+    property_types['float32'] = "float"
+    property_types['float64'] = "float"
+    # property_types['object'] = "list"
+
+    start_time =time()
+    print "--> Saving .ply"
+
+    ply_file = open(ply_filename,'w+')
+
+    ply_file.write("ply\n")
+    ply_file.write("format ascii 1.0\n")
+
+    # Declaring vertices and vertex properties
+    ply_file.write("element vertex "+str(len(positions))+"\n")
+    ply_file.write("property float x\n")
+    ply_file.write("property float y\n")
+    ply_file.write("property float z\n")
+
+    vertex_property_data = {}
+    for property_name in vertex_properties.keys():
+        property_data = vertex_properties[property_name]
+        if isinstance(property_data,dict):
+            property_data = np.array([property_data[p] for p in positions.keys()])
+        elif isinstance(property_data,list) or isinstance(property_data,tuple):
+            property_data = np.array(property_data)
+        vertex_property_data[property_name] = property_data
+
+        if property_data.ndim == 1:
+            property_type = property_types[str(property_data.dtype)]
+        elif property_data.ndim == 2:
+            property_type = "list int "+property_types[str(property_data.dtype)]
+        else:
+            property_type = "tensor "
+            for i in xrange(property_data.ndim-1):
+                property_type += "int "
+            property_type += property_types[str(property_data.dtype)]
+
+        ply_file.write("property "+property_type+" "+property_name+"\n")
+
+    ply_file.write("element face "+str(len(triangles))+"\n")
+    ply_file.write("property list int int vertex_index\n")
+
+    triangle_property_data = {}
+    for property_name in triangle_properties.keys():
+        property_data = triangle_properties[property_name]
+        if isinstance(property_data,dict):
+            property_data = np.array([property_data[t] for t in triangles.keys()])
+        elif isinstance(property_data,list) or isinstance(property_data,tuple):
+            property_data = np.array(property_data)
+        triangle_property_data[property_name] = property_data
+
+        if property_data.ndim == 1:
+            property_type = property_types[str(property_data.dtype)]
+        elif property_data.ndim == 2:       
+            property_type = "list int "+property_types[str(property_data.dtype)]
+        else:
+            property_type = "tensor "
+            for i in xrange(property_data.ndim-1):
+                property_type += "int "
+            property_type += property_types[str(property_data.dtype)]
+        ply_file.write("property "+property_type+" "+property_name+"\n")
+    ply_file.write("end_header\n")
+
+    # Writing property data
+    vertex_index = {}
+    for pid, p in enumerate(positions.keys()):
+        ply_file.write(str(positions[p][0])+" ")
+        ply_file.write(str(positions[p][1])+" ")
+        ply_file.write(str(positions[p][2]))
+        for property_name in vertex_properties.keys():
+            data = np.array(vertex_property_data[property_name][pid])
+            if data.ndim == 0:
+                ply_file.write(" "+str(data))
+            else:
+                ply_file.write(multidim_data_ply_string(data))
+        ply_file.write("\n")
+        vertex_index[p] = pid
+
+    for tid, t in enumerate(triangles.keys()):
+        ply_file.write("3 ")
+        ply_file.write(str(vertex_index[triangles[t][0]])+" ")
+        ply_file.write(str(vertex_index[triangles[t][1]])+" ")
+        ply_file.write(str(vertex_index[triangles[t][2]]))
+        for property_name in triangle_properties.keys():
+            data = np.array(triangle_property_data[property_name][tid])
+            if data.ndim == 0:
+                ply_file.write(" "+str(data))
+            else:
+                ply_file.write(multidim_data_ply_string(data))
+        ply_file.write("\n")
+    ply_file.flush()
+    ply_file.close()
+
+    end_time = time()
+    print "<-- Saving .ply        [",end_time-start_time,"s]"
+
+def multidim_data_ply_string(data):
+    data_string = ""
+    for dim in xrange(data.ndim):
+        data_string += " "+str(data.shape[dim])
+    # print data," (",len(data),")"
+    # data_string = " "+str(len(data))
+    for d in data.ravel():  
+        data_string += " "+str(d)
+        # data_string += (" "+str(d)) if data.ndim==1 else multidim_data_ply_string(d)
+    return data_string
+
 
