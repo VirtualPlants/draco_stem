@@ -301,9 +301,10 @@ def save_ply_cellcomplex_topomesh(topomesh,ply_filename,color_faces=False,colorm
     print "<-- Saving .ply        [",end_time-start_time,"s]"
 
 
-def save_ply_property_topomesh(topomesh,ply_filename,properties_to_save=dict([(0,[]),(1,['length']),(2,['area','epidermis']),(3,[])]),color_faces=False):
-    start_time =time()
-    print "--> Saving .ply"
+def save_ply_property_topomesh(topomesh,ply_filename,properties_to_save=dict([(0,[]),(1,['length']),(2,['area','epidermis']),(3,[])]),color_faces=False, coordinatepropname = 'barycenter', verbose = True):
+    if verbose:
+        start_time =time()
+        print "--> Saving .ply"
     ply_file = open(ply_filename,'w+')
 
     property_types = {}
@@ -323,7 +324,7 @@ def save_ply_property_topomesh(topomesh,ply_filename,properties_to_save=dict([(0
     ply_file.write("property float y\n")
     ply_file.write("property float z\n")
     for property_name in properties_to_save[0]:
-        if topomesh.has_wisp_property(property_name,0,is_computed=True):
+        if property_name != coordinatepropname and topomesh.has_wisp_property(property_name,0,is_computed=True):
             property_type = property_types[str(topomesh.wisp_property(property_name,0).values().dtype)]
             ply_file.write("property "+property_type+" "+property_name+"\n")
     ply_file.write("element face "+str(topomesh.nb_wisps(2))+"\n")
@@ -352,9 +353,16 @@ def save_ply_property_topomesh(topomesh,ply_filename,properties_to_save=dict([(0
     ply_file.write("end_header\n")    
     vertex_index = {}
     for v,pid in enumerate(topomesh.wisps(0)):
-        ply_file.write(str(topomesh.wisp_property('barycenter',0)[pid][0])+" ")
-        ply_file.write(str(topomesh.wisp_property('barycenter',0)[pid][1])+" ")
-        ply_file.write(str(topomesh.wisp_property('barycenter',0)[pid][2])+" ")
+        ply_file.write(str(topomesh.wisp_property(coordinatepropname,0)[pid][0])+" ")
+        ply_file.write(str(topomesh.wisp_property(coordinatepropname,0)[pid][1])+" ")
+        ply_file.write(str(topomesh.wisp_property(coordinatepropname,0)[pid][2])+" ")
+        for property_name in properties_to_save[0] :
+            if property_name != coordinatepropname and topomesh.has_wisp_property(property_name,0,is_computed=True):
+                property_type = property_types[str(topomesh.wisp_property(property_name,0).values().dtype)]
+                if property_type == 'int':
+                    ply_file.write(str(int(topomesh.wisp_property(property_name,0)[fid]))+" ")
+                else:
+                    ply_file.write(str(topomesh.wisp_property(property_name,0)[fid])+" ")
         ply_file.write("\n")
         vertex_index[pid] = v        
 
@@ -403,15 +411,20 @@ def save_ply_property_topomesh(topomesh,ply_filename,properties_to_save=dict([(0
     ply_file.flush()
     ply_file.close()
 
-    end_time = time()
-    print "<-- Saving .ply        [",end_time-start_time,"s]"
+    if verbose:
+        end_time = time()
+        print "<-- Saving .ply        [",end_time-start_time,"s]"
 
 
-def read_ply_property_topomesh(ply_filename):
+def read_ply_property_topomesh(ply_filename, verbose = False):
     """
     """
     import re
     from openalea.cellcomplex.property_topomesh.utils.array_tools import array_unique
+
+    if verbose:
+        start_time =time()
+        print "--> Reading .ply"
 
     property_types = {}
     property_types['int'] = 'int'
@@ -424,9 +437,10 @@ def read_ply_property_topomesh(ply_filename):
     property_types['list'] = 'list'
     property_types['tensor'] = 'tensor'
 
-    ply_file = open(ply_filename,'rb')
-    assert "ply" in ply_file.next()
-    assert "ascii" in ply_file.next()
+    ply_file = open(ply_filename,'rU')
+    ply_stream = enumerate(ply_file,1)
+    assert "ply" in ply_stream.next()[1]
+    assert "ascii" in ply_stream.next()[1]
 
     n_wisps = {}
     properties = {}
@@ -437,70 +451,80 @@ def read_ply_property_topomesh(ply_filename):
     property_name = ""
     elements = []
 
-    line = ply_file.next()
+    lineno, line = ply_stream.next()
     while not 'end_header' in line:
-        if re.split(' ',line)[0] == 'element':
-            element_name = re.split(' ',line)[1]
-            elements.append(element_name)
-            n_wisps[element_name] = int(re.split(' ',line)[2])
-            properties[element_name] = []
-            properties_types[element_name] = {}
-            properties_list_types[element_name] = {}
-            properties_tensor_dims[element_name] = {}
+        try:
+            if re.split(' ',line)[0] == 'element':
+                element_name = re.split(' ',line)[1]
+                elements.append(element_name)
+                n_wisps[element_name] = int(re.split(' ',line)[2])
+                properties[element_name] = []
+                properties_types[element_name] = {}
+                properties_list_types[element_name] = {}
+                properties_tensor_dims[element_name] = {}
+                
+            if re.split(' ',line)[0] == 'property':
+                property_name = re.split(' ',line)[-1][:-1]
+                properties[element_name].append(property_name)
+                properties_types[element_name][property_name] = re.split(' ',line)[1]
+                if properties_types[element_name][property_name] == 'list':
+                    list_type = re.split(' ',line)[-2]
+                    properties_list_types[element_name][property_name] = list_type
+                elif properties_types[element_name][property_name] == 'tensor':
+                    properties_tensor_dims[element_name][property_name] = (np.array(re.split(' ',line))[:-2]=='int').sum()
+                    list_type = re.split(' ',line)[-2]
+                    properties_list_types[element_name][property_name] = list_type
+        except Exception, e:
+                raise ValueError(ply_filename, lineno, line, e)
             
-        if re.split(' ',line)[0] == 'property':
-            property_name = re.split(' ',line)[-1][:-1]
-            properties[element_name].append(property_name)
-            properties_types[element_name][property_name] = re.split(' ',line)[1]
-            if properties_types[element_name][property_name] == 'list':
-                list_type = re.split(' ',line)[-2]
-                properties_list_types[element_name][property_name] = list_type
-            elif properties_types[element_name][property_name] == 'tensor':
-                properties_tensor_dims[element_name][property_name] = (np.array(re.split(' ',line))[:-2]=='int').sum()
-                list_type = re.split(' ',line)[-2]
-                properties_list_types[element_name][property_name] = list_type
-        
-        line = ply_file.next()
-    print n_wisps
-    print properties
-    print properties_list_types
+        lineno, line = ply_stream.next()
+
+    if verbose: print n_wisps
+    if verbose: print properties
+    if verbose: print properties_list_types
 
     element_properties = {}
 
     for element_name in elements:
         element_properties[element_name] = {}
         for wid in xrange(n_wisps[element_name]):
-            line = ply_file.next()
+            lineno, line = ply_stream.next()
+            line = line.strip()
             line_props = {}
             prop_index = 0
-            for prop in properties[element_name]:
-                prop_type = properties_types[element_name][prop]
-                if property_types[prop_type] == 'float':
-                    line_props[prop] = float(re.split(' ',line)[prop_index])
-                    prop_index += 1
-                elif property_types[prop_type] == 'int':
-                    line_props[prop] = int(re.split(' ',line)[prop_index])
-                    prop_index += 1
-                elif property_types[prop_type] == 'list':
-                    list_length = int(re.split(' ',line)[prop_index])
-                    prop_index += 1
-                    list_type =  properties_list_types[element_name][prop]
-                    if property_types[list_type] == 'float':
-                        line_props[prop] = [float(p) for p in re.split(' ',line)[prop_index:prop_index+list_length]]
-                    elif property_types[list_type] == 'int':
-                        line_props[prop] = [int(p) for p in re.split(' ',line)[prop_index:prop_index+list_length]]
-                    prop_index += list_length
-                elif property_types[prop_type] == 'tensor':
-                    n_dims = properties_tensor_dims[element_name][property_name]
-                    tensor_dims = tuple(np.array(re.split(' ',line)[prop_index:prop_index+n_dims]).astype(int))
-                    prop_index += n_dims
-                    list_type =  properties_list_types[element_name][prop]
-                    line_props[prop] = np.array(re.split(' ',line)[prop_index:prop_index+np.prod(tensor_dims)]).astype(property_types[list_type]).reshape(tensor_dims)
-                    prop_index += np.prod(tensor_dims)
+            try:
+                for prop in properties[element_name]:
+                    prop_type = properties_types[element_name][prop]
+                    if property_types[prop_type] == 'float':
+                        line_props[prop] = float(re.split(' ',line)[prop_index])
+                        prop_index += 1
+                    elif property_types[prop_type] == 'int':
+                        line_props[prop] = int(re.split(' ',line)[prop_index])
+                        prop_index += 1
+                    elif property_types[prop_type] == 'list':
+                        list_length = int(re.split(' ',line)[prop_index])
+                        prop_index += 1
+                        list_type =  properties_list_types[element_name][prop]
+                        if property_types[list_type] == 'float':
+                            line_props[prop] = [float(p) for p in re.split(' ',line)[prop_index:prop_index+list_length]]
+                        elif property_types[list_type] == 'int':
+                            line_props[prop] = [int(p) for p in re.split(' ',line)[prop_index:prop_index+list_length]]
+                        prop_index += list_length
+                    elif property_types[prop_type] == 'tensor':
+                        n_dims = properties_tensor_dims[element_name][property_name]
+                        tensor_dims = tuple(np.array(re.split(' ',line)[prop_index:prop_index+n_dims]).astype(int))
+                        prop_index += n_dims
+                        list_type =  properties_list_types[element_name][prop]
+                        line_props[prop] = np.array(re.split(' ',line)[prop_index:prop_index+np.prod(tensor_dims)]).astype(property_types[list_type]).reshape(tensor_dims)
+                        prop_index += np.prod(tensor_dims)
+            except Exception, e:
+                raise ValueError(ply_filename, lineno, line, e)
 
             element_properties[element_name][wid] = line_props
     ply_file.close()
 
+    if verbose:
+        print "<-- Parsing .ply        [",time()-start_time,"s]"
 
     element_matching = {}
 
@@ -515,16 +539,17 @@ def read_ply_property_topomesh(ply_filename):
         elif element_properties['face'][fid].has_key('vertex_indices'):
             face_vertices[fid] = element_properties['face'][fid]['vertex_indices']
 
-    print len(point_positions)," Points, ", len(face_vertices), " Faces"
+    
+    if verbose: print len(point_positions)," Points, ", len(face_vertices), " Faces"
 
     unique_points = array_unique(np.array(point_positions.values()))
     point_matching = array_dict(vq(np.array(point_positions.values()),unique_points)[0],point_positions.keys())
     element_matching['vertex'] = point_matching
-    print len(unique_points)," Unique Points"
+    if verbose: print len(unique_points)," Unique Points"
 
     faces = np.array(face_vertices.values())
     if faces.ndim == 2:
-        print "Faces = Triangles !"
+        if verbose: print "Faces = Triangles !"
         triangular = True
         triangles = np.sort(point_matching.values(faces))
         unique_triangles = array_unique(triangles)
@@ -534,7 +559,7 @@ def read_ply_property_topomesh(ply_filename):
         unique_triangles = point_matching.values(faces)
         triangle_matching = array_dict(face_vertices.keys(),face_vertices.keys())
     element_matching['face'] = triangle_matching
-    print len(unique_triangles)," Unique Faces"
+    if verbose: print len(unique_triangles)," Unique Faces"
 
     if n_wisps.has_key('edge'):
         edge_vertices = {}
@@ -543,7 +568,7 @@ def read_ply_property_topomesh(ply_filename):
             edge_vertices[eid] = point_matching.values(np.array([element_properties['edge'][eid][dim] for dim in ['source','target']]))
             if element_properties['edge'][eid].has_key('face_index'):
                 edge_faces[eid] = element_properties['edge'][eid]['face_index']
-        print element_properties['edge']
+        #print element_properties['edge']
         if not 'face_index' in properties['edge']:
             face_edge_vertices = np.sort(np.concatenate([np.transpose([v,list(v[1:])+[v[0]]]) for v in unique_triangles]))
             face_edge_faces = np.concatenate([fid*np.ones_like(unique_triangles[fid]) for fid in xrange(len(unique_triangles))])
@@ -555,11 +580,11 @@ def read_ply_property_topomesh(ply_filename):
     else:
         edge_vertices = dict(zip(range(3*len(unique_triangles)),np.sort(np.concatenate([np.transpose([v,list(v[1:])+[v[0]]]) for v in unique_triangles]))))
         edge_faces = dict(zip(range(3*len(unique_triangles)),np.concatenate([fid*np.ones_like(unique_triangles[fid]) for fid in xrange(len(unique_triangles))])))
-    print len(edge_vertices)," Edges" 
+    if verbose: print len(edge_vertices)," Edges" 
     unique_edges = array_unique(np.sort(edge_vertices.values()))
     edge_matching = array_dict(vq(np.sort(edge_vertices.values()),unique_edges)[0],edge_vertices.keys())
     element_matching['edge'] = edge_matching
-    print len(unique_edges)," Unique Edges"
+    if verbose: print len(unique_edges)," Unique Edges"
     
     face_cells = {}
     for fid in xrange(len(unique_triangles)):
@@ -585,7 +610,7 @@ def read_ply_property_topomesh(ply_filename):
         for f in xrange(len(unique_triangles)):
             face_cells[triangle_matching[f]] = {0}
     element_matching['volume'] = cell_matching
-    print len(cell_matching)," Cells"
+    if verbose: print len(cell_matching)," Cells"
 
     topomesh = PropertyTopomesh(3)
 
@@ -630,6 +655,10 @@ def read_ply_property_topomesh(ply_filename):
                     for w in element_properties[element_name].keys():
                         property_dict[element_matching[element_name][w]] = element_properties[element_name][w][property_name]
                     topomesh.update_wisp_property(property_name,property_degree,array_dict(property_dict))
+
+    if verbose:
+        end_time = time()
+        print "<-- Reading .ply        [",end_time-start_time,"s]"
 
     return topomesh
 
