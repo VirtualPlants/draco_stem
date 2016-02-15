@@ -31,7 +31,7 @@ import os
 import sys
 import pickle
 
-def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,normal_method="orientation",object_positions=None,object_radius=10.):
+def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,normal_method="density",object_positions=None,object_radius=10.):
     """Compute a property of a PropertyTopomesh
 
     The function compute and fills a property of a PropertyTopomesh passed as argument. The given
@@ -749,6 +749,18 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
                 normal_norms = np.linalg.norm(normal_vectors,axis=1)
                 # normal_norms[np.where(normal_norms==0)] = 0.001
                 topomesh.update_wisp_property('normal',degree=degree,values=normal_vectors/normal_norms[:,np.newaxis],keys=np.array(list(topomesh.wisps(degree))))
+
+            elif normal_method == "barycenter":
+                vertices_positions = positions.values(topomesh.wisp_property('vertices',degree).values(list(topomesh.wisps(degree))))
+                normal_vectors = np.cross(vertices_positions[:,1]-vertices_positions[:,0],vertices_positions[:,2]-vertices_positions[:,0])
+
+                barycenter_vectors = topomesh.wisp_property('barycenter',2).values() - positions.values().mean(axis=0)
+                normal_orientation = np.sign(np.einsum("...ij,...ij->...i",normal_vectors,barycenter_vectors))
+                normal_vectors = normal_orientation[...,np.newaxis]*normal_vectors
+                normal_norms = np.linalg.norm(normal_vectors,axis=1)
+
+                topomesh.update_wisp_property('normal',degree=degree,values=normal_vectors/normal_norms[:,np.newaxis],keys=np.array(list(topomesh.wisps(degree))))
+
         
 
         elif degree == 0:
@@ -1348,6 +1360,10 @@ def compute_topomesh_vertex_property_from_faces(topomesh,property_name,weighting
         vertex_property = nd.sum(vertex_face_weight*vertex_face_property,vertex_face_vertices,index=list(topomesh.wisps(0)))/nd.sum(vertex_face_weight,vertex_face_vertices,index=list(topomesh.wisps(0)))
     elif vertex_face_property.ndim == 2:
         vertex_property = np.transpose([nd.sum(vertex_face_weight*vertex_face_property[:,k],vertex_face_vertices,index=list(topomesh.wisps(0)))/nd.sum(vertex_face_weight,vertex_face_vertices,index=list(topomesh.wisps(0))) for k in xrange(vertex_face_property.shape[1])])
+
+    if property_name in ['normal']:
+        vertex_property_norm = np.linalg.norm(vertex_property,axis=1)
+        vertex_property = vertex_property/vertex_property_norm[:,np.newaxis]
 
     topomesh.update_wisp_property(property_name,degree=0,values=array_dict(vertex_property,keys=list(topomesh.wisps(0))))
     
