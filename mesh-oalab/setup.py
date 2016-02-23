@@ -107,8 +107,8 @@ setup(
 
     # Declare scripts and wralea as entry_points (extensions) of your package 
     entry_points = { 
-        'wralea' : ['mesh = openalea.mesh_wralea' if has_project else 'mesh = mesh_wralea' ],
-        'oalab.applet': ['oalab.applet/mesh = openalea.mesh.plugin.applet'],
+        'wralea' : ['mesh = openalea.mesh_oalab_wralea' if has_project else 'mesh = mesh_oalab_wralea' ],
+        'oalab.applet': ['oalab.applet/mesh = openalea.mesh_oalab.plugin.applet'],
         #'console_scripts': [
         #       'fake_script = openalea.fakepackage.amodule:console_script', ],
         # 'gui_scripts': [

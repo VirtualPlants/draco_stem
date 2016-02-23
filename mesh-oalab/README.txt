@@ -1,4 +1,4 @@
-====== OpenAlea.mesh ======
+====== OpenAlea.mesh-oalab ======
 
 **Authors** : XXX
 
@@ -14,13 +14,13 @@
 
 === Description ===
 
-OpenAlea.mesh is a XXX
+OpenAlea.mesh-oalab is a XXX
 
 
 
 === Content ===
 
-The OpenAlea.mesh package contains :
+The OpenAlea.mesh-oalab package contains :
 
 
 ===== Installation =====
@@ -51,5 +51,5 @@ python setup.py install
 
 ===== Documentation =====
 
-http://openalea.gforge.inria.fr/doc/openalea/mesh/doc/_build/html/contents.html
+http://openalea.gforge.inria.fr/doc/openalea/mesh-oalab/doc/_build/html/contents.html
 
