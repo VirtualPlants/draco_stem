@@ -32,7 +32,7 @@ from copy import deepcopy
 from time import time
 
 
-def optimize_topomesh(input_topomesh,omega_forces={'regularization':0.00,'laplacian':1.0,'planarization':0.27,'epidermis_planarization':0.07},omega_regularization_max=0.05,iterations=20,edge_flip=False,**kwargs):
+def optimize_topomesh(input_topomesh,omega_forces={'regularization':0.00,'laplacian':1.0,'planarization':0.27,'epidermis_planarization':0.07},omega_regularization_max=None,iterations=20,edge_flip=False,**kwargs):
     """
     """
 
@@ -168,7 +168,9 @@ def optimize_topomesh(input_topomesh,omega_forces={'regularization':0.00,'laplac
         start_time = time()
         
         gaussian_sigma = kwargs.get('gaussian_sigma',10.0)
-        property_topomesh_vertices_deformation(topomesh,iterations=iterations_per_step,omega_forces=omega_forces,sigma_deformation=sigma_deformation,gradient_derivatives=gradient_derivatives,resolution=kwargs.get("image_resolution",(1.0,1.0,1.0)),gaussian_sigma=gaussian_sigma)
+        target_areas = kwargs.get('target_areas',None)
+
+        property_topomesh_vertices_deformation(topomesh,iterations=iterations_per_step,omega_forces=omega_forces,sigma_deformation=sigma_deformation,gradient_derivatives=gradient_derivatives,resolution=kwargs.get("image_resolution",(1.0,1.0,1.0)),gaussian_sigma=gaussian_sigma,target_areas=target_areas)
 
         if cell_vertex_motion:
             vertex_start_time = time()

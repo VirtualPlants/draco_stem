@@ -35,9 +35,21 @@ def cell_vertex_extraction(img,**kwargs):
     neighborhood_size = np.array(map(len,neighborhoods)).reshape(shape[0]-1,shape[1]-1,shape[2]-1)
     neighborhoods = np.array(neighborhoods).reshape(shape[0]-1,shape[1]-1,shape[2]-1)
     
+    print (neighborhood_size>5).sum()
+
     vertex_coords = np.where(neighborhood_size==4)
+    #vertex_coords = np.where(neighborhood_size >= 4)
     vertex_points = np.transpose(vertex_coords)+0.5
     vertex_cells = np.array([p for p in neighborhoods[vertex_coords]],int)
+    #vertex_cells = np.array([p[:4] for p in neighborhoods[vertex_coords]],int)
+
+    clique_vertex_coords = np.where(neighborhood_size==5)
+    clique_vertex_points = np.concatenate([(p,p) for p in np.transpose(clique_vertex_coords)])+0.5
+    clique_vertex_cells = np.concatenate([[p[:4],np.concatenate([[p[0]],p[2:]])] for p in neighborhoods[clique_vertex_coords]]).astype(int)
+    print clique_vertex_cells
+
+    vertex_points = np.concatenate([vertex_points,clique_vertex_points])
+    vertex_cells = np.concatenate([vertex_cells,clique_vertex_cells])
 
     unique_cell_vertices = array_unique(vertex_cells)
     vertices_matching = vq(vertex_cells,unique_cell_vertices)[0]

@@ -33,7 +33,7 @@ from time                                   import time
 from copy                                   import deepcopy
 
 
-def property_topomesh_vertices_deformation(topomesh,iterations=1,omega_forces=dict([('gradient',0.1),('regularization',0.5)]),sigma_deformation=2*np.sqrt(3),gradient_derivatives=None,gaussian_sigma=10.0,resolution=(1.0,1.0,1.0),target_normal=None,distance_threshold=2*np.sqrt(3),edge_collapse=False):
+def property_topomesh_vertices_deformation(topomesh,iterations=1,omega_forces=dict([('gradient',0.1),('regularization',0.5)]),sigma_deformation=2*np.sqrt(3),gradient_derivatives=None,gaussian_sigma=10.0,resolution=(1.0,1.0,1.0),target_normal=None,target_areas=None,distance_threshold=2*np.sqrt(3),edge_collapse=False):
     """todo"""
 
     for iteration in xrange(iterations):
@@ -61,7 +61,7 @@ def property_topomesh_vertices_deformation(topomesh,iterations=1,omega_forces=di
         if omega_forces.has_key('area') and omega_forces['area']!=0.0:
             start_time = time()
             print "--> Computing area force"
-            area_force = property_topomesh_area_smoothing_force(topomesh)
+            area_force = property_topomesh_area_smoothing_force(topomesh,target_areas)
             deformation_force += omega_forces['area']*area_force
             end_time = time()
             print "<-- Computing area force [",end_time-start_time,"s]"
@@ -282,7 +282,7 @@ def property_topomesh_triangle_regularization_force(topomesh):
 
     return triangle_force
 
-def property_topomesh_area_smoothing_force(topomesh):
+def property_topomesh_area_smoothing_force(topomesh,target_areas=None):
 
     compute_topomesh_property(topomesh,'vertices',degree=2)
     compute_topomesh_property(topomesh,'length',degree=1)
@@ -304,8 +304,13 @@ def property_topomesh_area_smoothing_force(topomesh):
     triangle_areas = np.sqrt((triangle_perimeters/2.0)*(triangle_perimeters/2.0-triangle_edge_lengths[:,0])*(triangle_perimeters/2.0-triangle_edge_lengths[:,1])*(triangle_perimeters/2.0-triangle_edge_lengths[:,2]))
     triangle_areas[np.where(triangle_areas==0.0)] = 0.001
 
-    area_edge_1_force = -triangle_areas*(triangle_edge_lengths[:,0]**2+triangle_edge_lengths[:,2]**2-triangle_edge_lengths[:,1]**2)*triangle_edge_lengths[:,1]
-    area_edge_2_force = -triangle_areas*(triangle_edge_lengths[:,0]**2+triangle_edge_lengths[:,1]**2-triangle_edge_lengths[:,2]**2)*triangle_edge_lengths[:,2]
+    if target_areas is None:
+        target_areas = triangle_areas.mean()*np.ones(len(triangle_areas))
+    else:
+        target_areas = np.tile(target_areas,(3))
+
+    area_edge_1_force = (target_areas-triangle_areas)*(triangle_edge_lengths[:,0]**2+triangle_edge_lengths[:,2]**2-triangle_edge_lengths[:,1]**2)*triangle_edge_lengths[:,1]
+    area_edge_2_force = (target_areas-triangle_areas)*(triangle_edge_lengths[:,0]**2+triangle_edge_lengths[:,1]**2-triangle_edge_lengths[:,2]**2)*triangle_edge_lengths[:,2]
 
     area_unitary_force = -(area_edge_1_force[:,np.newaxis]*triangle_edge_directions[:,1] + area_edge_2_force[:,np.newaxis]*triangle_edge_directions[:,2])
 
