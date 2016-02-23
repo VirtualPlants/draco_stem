@@ -168,8 +168,7 @@ def optimize_topomesh(input_topomesh,omega_forces={'regularization':0.00,'laplac
         start_time = time()
         
         gaussian_sigma = kwargs.get('gaussian_sigma',10.0)
-        if omega_forces.has_key('area'):
-            target_areas = kwargs.get('target_areas',None)
+        target_areas = kwargs.get('target_areas',None)
 
         property_topomesh_vertices_deformation(topomesh,iterations=iterations_per_step,omega_forces=omega_forces,sigma_deformation=sigma_deformation,gradient_derivatives=gradient_derivatives,resolution=kwargs.get("image_resolution",(1.0,1.0,1.0)),gaussian_sigma=gaussian_sigma,target_areas=target_areas)
 
