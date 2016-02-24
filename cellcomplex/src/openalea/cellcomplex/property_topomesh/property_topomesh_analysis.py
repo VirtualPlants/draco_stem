@@ -1297,13 +1297,13 @@ def compute_topomesh_vertex_property_from_faces(topomesh,property_name,weighting
     assert not face_property.values().dtype == np.object
 
     if neighborhood == 1:
-        vertex_faces = np.concatenate([list(topomesh.regions(0,v,2)) for v in topomesh.wisps(0)])
-        vertex_face_vertices = np.concatenate([v*np.ones_like(list(topomesh.regions(0,v,2))) for v in topomesh.wisps(0)])
+        vertex_faces = np.concatenate([list(topomesh.regions(0,v,2)) for v in topomesh.wisps(0)]).astype(np.uint16)
+        vertex_face_vertices = np.concatenate([v*np.ones_like(list(topomesh.regions(0,v,2))) for v in topomesh.wisps(0)]).astype(np.uint16)
     else:
         vertex_face_adjacency_matrix = topomesh.nb_wisps(2)*np.ones((max(topomesh.wisps(0))+1,max(topomesh.wisps(2))+1))
 
-        vertex_faces = np.concatenate([list(topomesh.regions(0,v,2)) for v in topomesh.wisps(0)])
-        vertex_face_vertices = np.concatenate([v*np.ones_like(list(topomesh.regions(0,v,2))) for v in topomesh.wisps(0)])
+        vertex_faces = np.concatenate([list(topomesh.regions(0,v,2)) for v in topomesh.wisps(0)]).astype(np.uint16)
+        vertex_face_vertices = np.concatenate([v*np.ones_like(list(topomesh.regions(0,v,2))) for v in topomesh.wisps(0)]).astype(np.uint16)
     
         compute_topomesh_property(topomesh,'border_neighbors',2)
 
@@ -1360,10 +1360,13 @@ def compute_topomesh_vertex_property_from_faces(topomesh,property_name,weighting
         vertex_property = nd.sum(vertex_face_weight*vertex_face_property,vertex_face_vertices,index=list(topomesh.wisps(0)))/nd.sum(vertex_face_weight,vertex_face_vertices,index=list(topomesh.wisps(0)))
     elif vertex_face_property.ndim == 2:
         vertex_property = np.transpose([nd.sum(vertex_face_weight*vertex_face_property[:,k],vertex_face_vertices,index=list(topomesh.wisps(0)))/nd.sum(vertex_face_weight,vertex_face_vertices,index=list(topomesh.wisps(0))) for k in xrange(vertex_face_property.shape[1])])
+    elif vertex_face_property.ndim == 3:
+        vertex_property = np.transpose([[nd.sum(vertex_face_weight*vertex_face_property[:,j,k],vertex_face_vertices,index=list(topomesh.wisps(0)))/nd.sum(vertex_face_weight,vertex_face_vertices,index=list(topomesh.wisps(0))) for k in xrange(vertex_face_property.shape[2])] for j in xrange(vertex_face_property.shape[1])])
 
     if property_name in ['normal']:
         vertex_property_norm = np.linalg.norm(vertex_property,axis=1)
         vertex_property = vertex_property/vertex_property_norm[:,np.newaxis]
+    vertex_property[np.isnan(vertex_property)] = 0
 
     topomesh.update_wisp_property(property_name,degree=0,values=array_dict(vertex_property,keys=list(topomesh.wisps(0))))
     
