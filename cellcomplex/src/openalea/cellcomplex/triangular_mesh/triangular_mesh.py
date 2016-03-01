@@ -219,25 +219,65 @@ class TriangularMesh(object):
 
             return vtk_mesh
 
-    def min(self):
+    def data(self):
         if len(self.triangle_data) > 0:
-            return np.min(self.triangle_data.values())
+            data = np.array(self.triangle_data.values())
         elif len(self.point_data) > 0:
-            return np.min(self.point_data.values())
+            data = np.array(self.point_data.values())
         elif len(self.triangles) > 0:
-            return np.min(self.triangles.keys())
+            data = np.array(self.triangles.keys())
         else:
-            return np.min(self.points.keys())
+            data = np.array(self.points.keys())
+        return data
+
+    def min(self):
+        if self.data().ndim == 1:
+            return np.min(self.data())
+        elif self.data().ndim == 2:
+            return np.min(np.linalg.norm(self.data(),axis=1))
+        elif self.data().ndim == 3:
+            return np.min(np.sqrt(np.trace(np.power(self.data(),2),axis1=1,axis2=2)))
 
     def max(self):
-        if len(self.triangle_data) > 0:
-            return np.max(self.triangle_data.values())
-        elif len(self.point_data) > 0:
-            return np.max(self.point_data.values())
-        elif len(self.triangles) > 0:
-            return np.max(self.triangles.keys())
+        if self.data().ndim == 1:
+            return np.max(self.data())
+        elif self.data().ndim == 2:
+            return np.max(np.linalg.norm(self.data(),axis=1))
+        elif self.data().ndim == 3:
+            return np.max(np.sqrt(np.trace(np.power(self.data(),2),axis1=1,axis2=2)))
+
+    def mean(self):
+        if self.data().ndim == 1:
+            return np.mean(self.data())
+        elif self.data().ndim == 2:
+            return np.mean(np.linalg.norm(self.data(),axis=1))
+        elif self.data().ndim == 3:
+            return np.mean(np.sqrt(np.trace(np.power(self.data(),2),axis1=1,axis2=2)))
+
+    def bounding_box(self):
+        if len(self.points)>0:
+            extent_min = (np.min(self.points.values(),axis=0))
+            extent_max = (np.max(self.points.values(),axis=0))
+            return zip(extent_min,extent_max)
         else:
-            return np.max(self.points.keys())
+            return zip([0,0,0],[0,0,0])
+
+    def characteristic_dimension(self):
+        if len(self.points)>1:
+            if len(self.triangles)>0:
+                from openalea.container import array_dict
+                triangle_edge_list = [[1,2],[0,2],[0,1]]
+                triangle_edges = np.concatenate(np.array(self.triangles.values())[:,triangle_edge_list])
+                triangle_edge_points = array_dict(self.points).values(triangle_edges)
+                triangle_edge_vectors = triangle_edge_points[:,1] - triangle_edge_points[:,0]
+                triangle_edge_lengths = np.linalg.norm(triangle_edge_vectors,axis=1)
+                return triangle_edge_lengths.mean()
+            else:
+                from scipy.cluster.vq import vq
+                point_distances = np.sort([vq(np.array(self.points.values()),np.array([self.points[p]]))[1] for p in self.points.keys()])
+                return point_distances[:,1].mean()
+        else:
+            return 0.
 
 
 def point_triangular_mesh(point_positions, point_data=None):
