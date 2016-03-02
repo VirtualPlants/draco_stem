@@ -464,6 +464,7 @@ def read_ply_property_topomesh(ply_filename, verbose = True):
                 properties_tensor_dims[element_name] = {}
                 
             if re.split(' ',line)[0] == 'property':
+                print line
                 property_name = re.split(' ',line)[-1][:-1]
                 properties[element_name].append(property_name)
                 properties_types[element_name][property_name] = re.split(' ',line)[1]
@@ -511,7 +512,7 @@ def read_ply_property_topomesh(ply_filename, verbose = True):
                             line_props[prop] = [int(p) for p in re.split(' ',line)[prop_index:prop_index+list_length]]
                         prop_index += list_length
                     elif property_types[prop_type] == 'tensor':
-                        n_dims = properties_tensor_dims[element_name][property_name]
+                        n_dims = properties_tensor_dims[element_name][prop]
                         tensor_dims = tuple(np.array(re.split(' ',line)[prop_index:prop_index+n_dims]).astype(int))
                         prop_index += n_dims
                         list_type =  properties_list_types[element_name][prop]
