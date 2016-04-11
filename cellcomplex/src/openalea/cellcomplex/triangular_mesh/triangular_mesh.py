@@ -18,6 +18,7 @@
 ###############################################################################
 
 import numpy as np
+from openalea.container import array_dict
 
 def isiterable(obj):
     try:
@@ -36,6 +37,7 @@ class TriangularMesh(object):
         self.triangle_data = {}
 
         self.point_radius = 2.0
+        self.char_dimension = None
 
     def _repr_geom_(self):
         import openalea.plantgl.all as pgl
@@ -263,21 +265,35 @@ class TriangularMesh(object):
             return zip([0,0,0],[0,0,0])
 
     def characteristic_dimension(self):
-        if len(self.points)>1:
-            if len(self.triangles)>0:
-                from openalea.container import array_dict
-                triangle_edge_list = [[1,2],[0,2],[0,1]]
-                triangle_edges = np.concatenate(np.array(self.triangles.values())[:,triangle_edge_list])
-                triangle_edge_points = array_dict(self.points).values(triangle_edges)
-                triangle_edge_vectors = triangle_edge_points[:,1] - triangle_edge_points[:,0]
-                triangle_edge_lengths = np.linalg.norm(triangle_edge_vectors,axis=1)
-                return triangle_edge_lengths.mean()
+        if self.char_dimension is None:
+            if len(self.points)>1:
+                if len(self.triangles)>0:
+                    triangle_edge_list = [[1,2],[0,2],[0,1]]
+                    triangle_edges = np.concatenate(np.array(self.triangles.values())[:,triangle_edge_list])
+                    triangle_edge_points = array_dict(self.points).values(triangle_edges)
+                    triangle_edge_vectors = triangle_edge_points[:,1] - triangle_edge_points[:,0]
+                    triangle_edge_lengths = np.linalg.norm(triangle_edge_vectors,axis=1)
+                    self.char_dimension = triangle_edge_lengths.mean()
+                elif len(self.edges)>0:
+                    edges = np.array(self.edges.values())
+                    edge_points = array_dict(self.points).values(edges)
+                    edge_vectors = edge_points[:,1] - edge_points[:,0]
+                    edge_lengths = np.linalg.norm(edge_vectors,axis=1)
+                    self.char_dimension = edge_lengths.mean()
+                else:
+                    #from scipy.cluster.vq import vq
+                    #point_distances = np.sort([vq(np.array(self.points.values()),np.array([self.points[p]]))[1] for p in self.points.keys()])
+                    # self.char_dimension = point_distances[:,1].mean()
+                    bbox = np.array(self.bounding_box())
+                    bbox_volume = np.prod(bbox[:,1] - bbox[:,0])
+                    point_volume = bbox_volume/float(2.*len(self.points))
+                    self.char_dimension = np.power(3.*point_volume/(4.*np.pi),1/3.)
+                return self.char_dimension
             else:
-                from scipy.cluster.vq import vq
-                point_distances = np.sort([vq(np.array(self.points.values()),np.array([self.points[p]]))[1] for p in self.points.keys()])
-                return point_distances[:,1].mean()
+                return 1.
         else:
-            return 0.
+            return self.char_dimension
+
 
 
 def point_triangular_mesh(point_positions, point_data=None):
