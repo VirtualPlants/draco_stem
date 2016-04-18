@@ -68,7 +68,7 @@ def marching_cubes(field,iso=0.5):
         surface_points, surface_triangles = marching_cubes(density_field,iso)
 
     except ImportError:
-        print "Please install SciKit-Image!"
+        print "Please try to install SciKit-Image!"
 
         from mayavi import mlab
         from mayavi.mlab import contour3d
@@ -84,13 +84,45 @@ def marching_cubes(field,iso=0.5):
 
     return surface_points, surface_triangles
 
+def vtk_marching_cubes(field,iso=0.5):
+
+    import vtk
+
+    int_field = (np.minimum(field*255,255)).astype(np.uint8)
+    nx, ny, nz = int_field.shape
+    data_string = int_field.tostring('F')
+
+    reader = vtk.vtkImageImport()
+    reader.CopyImportVoidPointer(data_string, len(data_string))
+    reader.SetDataScalarTypeToUnsignedChar()
+    reader.SetNumberOfScalarComponents(1)
+    reader.SetDataExtent(0, nx - 1, 0, ny - 1, 0, nz - 1)
+    reader.SetWholeExtent(0, nx - 1, 0, ny - 1, 0, nz - 1)
+    reader.Update()
+
+    contour = vtk.vtkImageMarchingCubes()
+    if vtk.VTK_MAJOR_VERSION <= 5:
+        contour.SetInput(reader.GetOutput())
+    else:
+        contour.SetInputData(reader.GetOutput())   
+    contour.ComputeNormalsOn()
+    contour.ComputeGradientsOn()
+    contour.SetValue(0,int(iso*255))
+    contour.Update()
+
+    field_polydata = contour.GetOutput()
+
+    polydata_points = np.array([field_polydata.GetPoints().GetPoint(p) for p in xrange(field_polydata.GetPoints().GetNumberOfPoints())])
+    polydata_triangles =  np.array([[field_polydata.GetCell(t).GetPointIds().GetId(i) for i in xrange(3)] for t in xrange(field_polydata.GetNumberOfCells())])
+
+    return polydata_points, polydata_triangles
 
 def implicit_surface_topomesh(density_field,size,resolution,iso=0.5,center=True):
     import numpy as np
     from scipy.cluster.vq                       import kmeans, vq
     from openalea.container import array_dict, PropertyTopomesh
 
-    surface_points, surface_triangles = marching_cubes(density_field,iso)
+    surface_points, surface_triangles = vtk_marching_cubes(density_field,iso)
 
     surface_points = (np.array(surface_points))*(size*resolution/np.array(density_field.shape)) 
     if center:
