@@ -62,13 +62,34 @@ def implicit_surface(density_field,size,resolution,iso=0.5):
 
     return surface_points, surface_triangles
 
+def marching_cubes(field,iso=0.5):
+    try:
+        from skimage.measure import marching_cubes
+        surface_points, surface_triangles = marching_cubes(density_field,iso)
+
+    except ImportError:
+        print "Please install SciKit-Image!"
+
+        from mayavi import mlab
+        from mayavi.mlab import contour3d
+
+        mlab.clf()
+        surface = mlab.contour3d(field,contours=[iso])
+
+        my_actor=surface.actor.actors[0] 
+        poly_data_object=my_actor.mapper.input 
+        surface_points = (np.array(poly_data_object.points) - np.array([abs(grid_points/2.),abs(grid_points/2.),abs(grid_points/2.)])[np.newaxis,:])*(grid_max/abs(grid_points/2.))
+        surface_triangles = poly_data_object.polys.data.to_array().reshape([-1,4]) 
+        surface_triangles = surface_triangles[:,1:]
+
+    return surface_points, surface_triangles
+
 
 def implicit_surface_topomesh(density_field,size,resolution,iso=0.5,center=True):
     import numpy as np
     from scipy.cluster.vq                       import kmeans, vq
     from openalea.container import array_dict, PropertyTopomesh
 
-    from skimage.measure import marching_cubes
     surface_points, surface_triangles = marching_cubes(density_field,iso)
 
     surface_points = (np.array(surface_points))*(size*resolution/np.array(density_field.shape)) 
