@@ -1034,8 +1034,8 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
 
             try:
                 vertex_curvature_matrix_eigenvalues, vertex_curvature_matrix_eigenvectors = np.linalg.eig(vertex_curvature_matrix)
-            #except np.linalg.LinAlgError:
-            except LinAlgError:
+            except np.linalg.LinAlgError:
+            #except LinAlgError:
                 ok_curvature_matrix = np.unique(np.where(1-np.isnan(vertex_curvature_matrix))[0])
                 nan_curvature_matrix = np.unique(np.where(np.isnan(vertex_curvature_matrix))[0])
                 vertex_curvature_matrix_trunc = np.delete(vertex_curvature_matrix,nan_curvature_matrix)
@@ -1668,6 +1668,90 @@ def epidermis_topomesh(topomesh,cells=None):
         epidermis_topomesh.remove_wisp(3,c)
     epidermis_topomesh.update_wisp_property('barycenter',0,topomesh.wisp_property('barycenter',0).values(list(epidermis_topomesh.wisps(0))),keys=np.array(list(epidermis_topomesh.wisps(0))))
     return epidermis_topomesh
+
+def clean_topomesh(input_topomesh):
+    from copy import deepcopy
+
+    topomesh = deepcopy(input_topomesh)
+
+    cells_to_remove = [w for w in topomesh.wisps(3) if topomesh.nb_borders(3,w)==0]
+    for w in cells_to_remove:
+        topomesh.remove_wisp(3,w)
+
+    triangles_to_remove = [w for w in topomesh.wisps(2) if topomesh.nb_regions(2,w)==0]
+    for w in triangles_to_remove:
+        topomesh.remove_wisp(2,w)
+
+    edges_to_remove = [w for w in topomesh.wisps(1) if topomesh.nb_regions(1,w)==0]
+    for w in edges_to_remove:
+        topomesh.remove_wisp(1,w)
+        
+    vertices_to_remove = [w for w in topomesh.wisps(0) if topomesh.nb_regions(0,w)==0]
+    for w in vertices_to_remove:
+        topomesh.remove_wisp(0,w)
+
+    return topomesh
+    
+
+def cell_topomesh(input_topomesh, cells=None):
+    from copy import deepcopy
+    start_time = time()
+
+    #topomesh = PropertyTopomesh(topomesh=input_topomesh)
+    topomesh = PropertyTopomesh(3)
+
+    if cells is None:
+        cells = set(topomesh.wisps(3))
+    else:
+        cells = set(cells)
+
+    faces = set()
+    for c in cells:
+        topomesh._borders[3][c] = input_topomesh._borders[3][c]
+        faces = faces.union(set(topomesh._borders[3][c]))
+
+    edges = set()
+    for f in faces:
+        topomesh._borders[2][f] = input_topomesh._borders[2][f]
+        topomesh._regions[2][f] = np.array(list(set(input_topomesh._regions[2][f]).intersection(cells)))
+        edges = edges.union(set(topomesh._borders[2][f]))
+
+    vertices = set()
+    for e in edges:
+        topomesh._borders[1][e] = input_topomesh._borders[1][e]
+        topomesh._regions[1][e] = np.array(list(set(input_topomesh._regions[1][e]).intersection(faces)))
+        vertices = vertices.union(set(topomesh._borders[1][e]))
+
+    for v in vertices:
+        topomesh._regions[0][v] = np.array(list(set(input_topomesh._regions[0][v]).intersection(edges)))
+
+    topomesh.update_wisp_property('barycenter',0,array_dict(input_topomesh.wisp_property('barycenter',0).values(list(vertices)),list(vertices)))
+
+
+    # cells_to_remove = [c for c in topomesh.wisps(3) if not c in cells]
+    # cells_to_remove = list(set(topomesh.wisps(3)).difference(set(cells)))
+
+
+    # for c in cells_to_remove:
+    #     topomesh.remove_wisp(3,c)
+
+    # faces_to_remove = [w for w in topomesh.wisps(2) if topomesh.nb_regions(2,w)==0]
+    # for w in faces_to_remove:
+    #     topomesh.remove_wisp(2,w)
+
+    # edges_to_remove = [w for w in topomesh.wisps(1) if topomesh.nb_regions(1,w)==0]
+    # for w in edges_to_remove:
+    #     topomesh.remove_wisp(1,w)
+        
+    # vertices_to_remove = [w for w in topomesh.wisps(0) if topomesh.nb_regions(0,w)==0]
+    # for w in vertices_to_remove:
+    #     topomesh.remove_wisp(0,w)
+
+    end_time = time()
+    #end_time = time()
+    print "<-- Extracting cell topomesh     [",end_time-start_time,"s]"
+
+    return topomesh
 
     
 
