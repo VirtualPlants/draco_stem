@@ -339,52 +339,77 @@ def topomesh_to_triangular_mesh(topomesh, degree=3, coef=1.0, mesh_center=None, 
         compute_topomesh_property(topomesh,'triangles',degree=3)
         compute_topomesh_property(topomesh,'cells',degree=2)
 
-        cell_triangles = np.concatenate(topomesh.wisp_property('triangles',3).values(list(topomesh.wisps(3))))
+        cell_triangles = np.concatenate(topomesh.wisp_property('triangles',3).values(list(topomesh.wisps(3)))).astype(int)
 
     if degree == 3:
+        if property_name is not None:
+            property_data = topomesh.wisp_property(property_name,property_degree).values()
+        else:
+            property_data = np.array(topomesh.wisps(3))
+
+
         vertices_positions = []
         triangle_vertices = []
         triangle_topomesh_cells = []
         vertices_topomesh_vertices = []
         # triangle_topomesh_triangles = []
-        for c in topomesh.wisps(3):
-            if len(list(topomesh.borders(3,c,3)))>0:
-                cell_center = topomesh.wisp_property('barycenter',0).values(list(topomesh.borders(3,c,3))).mean(axis=0)
-                cell_vertices_position = cell_center + coef*(topomesh.wisp_property('barycenter',0).values(list(topomesh.borders(3,c,3)))-cell_center) - mesh_center
-                cell_vertices_index = array_dict(len(vertices_positions) + np.arange(len(list(topomesh.borders(3,c,3)))),list(topomesh.borders(3,c,3)))
-                vertices_positions += list(cell_vertices_position)
-                vertices_topomesh_vertices += list(topomesh.borders(3,c,3))
-                triangle_vertices += list(cell_vertices_index.values(topomesh.wisp_property('vertices',2).values(topomesh.wisp_property('triangles',3)[c])))
-                triangle_topomesh_cells += list(c*np.ones_like(topomesh.wisp_property('triangles',3)[c]))
-                # triangle_topomesh_triangles += topomesh.wisp_property('triangles',3)[c]
-        vertices_positions = array_dict(vertices_positions,np.arange(len(vertices_positions)))
-        vertices_topomesh_vertices = array_dict(vertices_topomesh_vertices,np.arange(len(vertices_positions)))
-        if epidermis:
-            compute_topomesh_property(topomesh,'epidermis',2)
-            epidermis_triangles = topomesh.wisp_property('epidermis',2).values(cell_triangles)
-            triangle_vertices = array_dict(np.array(triangle_vertices)[epidermis_triangles],np.arange(len(cell_triangles[epidermis_triangles])))
-            triangle_topomesh_cells = array_dict(np.array(triangle_topomesh_cells)[epidermis_triangles],np.arange(len(cell_triangles[epidermis_triangles])))
-            triangle_topomesh_triangles = array_dict(cell_triangles[epidermis_triangles],np.arange(len(cell_triangles[epidermis_triangles])))
-        else:
-            triangle_vertices = array_dict(triangle_vertices,np.arange(len(cell_triangles)))
-            triangle_topomesh_cells = array_dict(triangle_topomesh_cells,np.arange(len(cell_triangles)))
-            triangle_topomesh_triangles = array_dict(cell_triangles,np.arange(len(cell_triangles)))
-        edge_topomesh_edges = {}
 
-        triangular_mesh.points = vertices_positions.to_dict()
-        triangular_mesh.triangles = triangle_vertices.to_dict()
-        if property_name is not None:  
-            if property_degree == 2:
-                triangle_topomesh_triangle_property = array_dict(topomesh.wisp_property(property_name,property_degree).values(triangle_topomesh_triangles.values()),triangle_topomesh_triangles.keys())
-                triangular_mesh.triangle_data = triangle_topomesh_triangle_property.to_dict()
-            elif property_degree == 0:
-                vertex_topomesh_vertex_property = array_dict(topomesh.wisp_property(property_name,property_degree).values(vertices_topomesh_vertices.values()),vertices_topomesh_vertices.keys())
-                triangular_mesh.point_data = vertex_topomesh_vertex_property.to_dict()
-            elif property_degree == 3:
-                triangle_topomesh_cell_property = array_dict(topomesh.wisp_property(property_name,property_degree).values(triangle_topomesh_cells.values()),triangle_topomesh_cells.keys())
-                triangular_mesh.triangle_data = triangle_topomesh_cell_property.to_dict()
+        if property_data.ndim == 1 or property_degree<3:
+            for c in topomesh.wisps(3):
+                if len(list(topomesh.borders(3,c,3)))>0:
+                    cell_center = topomesh.wisp_property('barycenter',0).values(list(topomesh.borders(3,c,3))).mean(axis=0)
+                    cell_vertices_position = cell_center + coef*(topomesh.wisp_property('barycenter',0).values(list(topomesh.borders(3,c,3)))-cell_center) - mesh_center
+                    cell_vertices_index = array_dict(len(vertices_positions) + np.arange(len(list(topomesh.borders(3,c,3)))),list(topomesh.borders(3,c,3)))
+                    vertices_positions += list(cell_vertices_position)
+                    vertices_topomesh_vertices += list(topomesh.borders(3,c,3))
+                    triangle_vertices += list(cell_vertices_index.values(topomesh.wisp_property('vertices',2).values(topomesh.wisp_property('triangles',3)[c])))
+                    triangle_topomesh_cells += list(c*np.ones_like(topomesh.wisp_property('triangles',3)[c]))
+                    # triangle_topomesh_triangles += topomesh.wisp_property('triangles',3)[c]
+            vertices_positions = array_dict(vertices_positions,np.arange(len(vertices_positions)))
+            vertices_topomesh_vertices = array_dict(vertices_topomesh_vertices,np.arange(len(vertices_positions)))
+            if epidermis:
+                compute_topomesh_property(topomesh,'epidermis',2)
+                epidermis_triangles = topomesh.wisp_property('epidermis',2).values(cell_triangles)
+                triangle_vertices = array_dict(np.array(triangle_vertices)[epidermis_triangles],np.arange(len(cell_triangles[epidermis_triangles])))
+                triangle_topomesh_cells = array_dict(np.array(triangle_topomesh_cells)[epidermis_triangles],np.arange(len(cell_triangles[epidermis_triangles])))
+                triangle_topomesh_triangles = array_dict(cell_triangles[epidermis_triangles],np.arange(len(cell_triangles[epidermis_triangles])))
+            else:
+                triangle_vertices = array_dict(triangle_vertices,np.arange(len(cell_triangles)))
+                triangle_topomesh_cells = array_dict(triangle_topomesh_cells,np.arange(len(cell_triangles)))
+                triangle_topomesh_triangles = array_dict(cell_triangles,np.arange(len(cell_triangles)))
+            edge_topomesh_edges = {}
+
+            triangular_mesh.points = vertices_positions.to_dict()
+            triangular_mesh.triangles = triangle_vertices.to_dict()
+            if property_name is not None:  
+                if property_degree == 2:
+                    triangle_topomesh_triangle_property = array_dict(topomesh.wisp_property(property_name,property_degree).values(triangle_topomesh_triangles.values()),triangle_topomesh_triangles.keys())
+                    triangular_mesh.triangle_data = triangle_topomesh_triangle_property.to_dict()
+                elif property_degree == 0:
+                    vertex_topomesh_vertex_property = array_dict(topomesh.wisp_property(property_name,property_degree).values(vertices_topomesh_vertices.values()),vertices_topomesh_vertices.keys())
+                    triangular_mesh.point_data = vertex_topomesh_vertex_property.to_dict()
+                elif property_degree == 3:
+                    triangle_topomesh_cell_property = array_dict(topomesh.wisp_property(property_name,property_degree).values(triangle_topomesh_cells.values()),triangle_topomesh_cells.keys())
+                    triangular_mesh.triangle_data = triangle_topomesh_cell_property.to_dict()
+            else:
+                triangular_mesh.triangle_data = triangle_topomesh_cells.to_dict()
         else:
-            triangular_mesh.triangle_data = triangle_topomesh_cells.to_dict()
+            for c in topomesh.wisps(3):
+                if len(list(topomesh.borders(3,c,3)))>0:
+                    cell_center = topomesh.wisp_property('barycenter',0).values(list(topomesh.borders(3,c,3))).mean(axis=0)
+                    vertices_positions += [cell_center]
+
+            vertices_positions = array_dict(vertices_positions,np.array([c for c in topomesh.wisps(3) if len(list(topomesh.borders(3,c,3)))>0]))
+            vertices_topomesh_vertices = {}
+            edge_topomesh_edges = {}
+            triangle_topomesh_triangles = {}
+            triangle_topomesh_cells = {}
+
+            cell_property = array_dict(topomesh.wisp_property(property_name,property_degree).values(vertices_positions.keys()),vertices_positions.keys())
+
+            triangular_mesh.points = vertices_positions.to_dict()
+            triangular_mesh.point_data = cell_property
+            triangular_mesh.triangles = {}
 
     elif degree == 2:
         vertices_positions = []
@@ -399,7 +424,7 @@ def topomesh_to_triangular_mesh(topomesh, degree=3, coef=1.0, mesh_center=None, 
             triangle_vertices += list([triangle_vertices_index.values(topomesh.wisp_property('vertices',2)[t])])
         vertices_positions = array_dict(vertices_positions,np.arange(len(vertices_positions)))
         vertices_topomesh_vertices = array_dict(vertices_topomesh_vertices,np.arange(len(vertices_positions)))
-        triangle_topomesh_cells = np.concatenate([c*np.ones_like(topomesh.wisp_property('triangles',3)[c]) for c in topomesh.wisps(3)])
+        triangle_topomesh_cells = np.concatenate([c*np.ones_like(topomesh.wisp_property('triangles',3)[c]) for c in topomesh.wisps(3)]).astype(int)
         if epidermis:
             compute_topomesh_property(topomesh,'epidermis',2)
             epidermis_triangles = topomesh.wisp_property('epidermis',2).values(cell_triangles)
