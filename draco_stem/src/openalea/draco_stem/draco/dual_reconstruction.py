@@ -36,6 +36,7 @@ from openalea.container.property_topomesh import PropertyTopomesh
 from openalea.mesh.property_topomesh_analysis import *
 from openalea.mesh.utils.intersection_tools import inside_triangle, intersecting_segment, intersecting_triangle
 from openalea.mesh.utils.array_tools  import array_unique
+from openalea.mesh.utils.geometry_tools import triangle_geometric_features
 from openalea.mesh.property_topomesh_optimization import topomesh_triangle_split
 
 from time                                   import time, sleep
