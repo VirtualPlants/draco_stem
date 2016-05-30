@@ -1373,6 +1373,39 @@ def compute_topomesh_vertex_property_from_faces(topomesh,property_name,weighting
     end_time = time()
     print "<-- Computing vertex property from faces [",end_time-start_time,"s]"
 
+def compute_topomesh_cell_property_from_faces(topomesh,property_name,weighting='area'):
+    """
+    """
+    start_time = time()
+    print "--> Computing cell property from faces"
+
+    assert topomesh.has_wisp_property(property_name,2,is_computed=True)
+    assert weighting in ['uniform','area']
+
+    face_property = topomesh.wisp_property(property_name,2)
+
+    cell_faces = np.concatenate([list(topomesh.borders(3,c)) for c in topomesh.wisps(3)]).astype(np.uint16)
+    cell_face_cells = np.concatenate([c*np.ones(topomesh.nb_borders(3,c)) for c in topomesh.wisps(3)]).astype(np.uint16)
+
+    if weighting == 'uniform':
+        cell_face_weight = np.ones_like(cell_faces)
+    elif weighting == 'area':
+        compute_topomesh_property(topomesh,'area',2)
+        cell_face_weight = topomesh.wisp_property('area',2).values(cell_faces)
+
+    cell_face_property = face_property.values(cell_faces)
+
+    if cell_face_property.ndim == 1:
+        cell_property = nd.sum(cell_face_weight*cell_face_property,cell_face_cells,index=list(topomesh.wisps(3)))/nd.sum(cell_face_weight,cell_face_cells,index=list(topomesh.wisps(3)))
+    elif cell_face_property.ndim == 2:
+        cell_property = np.transpose([nd.sum(cell_face_weight*cell_face_property[:,k],cell_face_cells,index=list(topomesh.wisps(3)))/nd.sum(cell_face_weight,cell_face_cells,index=list(topomesh.wisps(3))) for k in xrange(cell_face_property.shape[1])])
+    elif cell_face_property.ndim == 3:
+        cell_property = np.transpose([[nd.sum(cell_face_weight*cell_face_property[:,j,k],cell_face_cells,index=list(topomesh.wisps(3)))/nd.sum(cell_face_weight,cell_face_cells,index=list(topomesh.wisps(3))) for k in xrange(cell_face_property.shape[2])] for j in xrange(cell_face_property.shape[1])])
+
+    topomesh.update_wisp_property(property_name,degree=3,values=array_dict(cell_property,keys=list(topomesh.wisps(3))))
+    
+    end_time = time()
+    print "<-- Computing cell property from faces [",end_time-start_time,"s]"
 
 
 def spatial_image_from_topomesh(topomesh,shape,offset=np.array([0.,0.,0.]),scale=1.0):
