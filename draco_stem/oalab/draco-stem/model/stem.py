@@ -30,14 +30,18 @@ inputfile = dirname+"/segmented_images/"+filename+".inr.gz"
 idra = IdraMesh(image_file=inputfile)
 world.add(idra.segmented_image,filename,colormap="glasbey",alphamap="constant",bg_id=1)
 raw_input()
-image_topomesh = idra.idra_topomesh(mesh_fineness=0.8)
-world.add(image_topomesh,"CGAL_topomesh")
+image_topomesh = idra.idra_topomesh(mesh_fineness=1.0)
+#world.add(image_topomesh,"CGAL_topomesh")
 
 cell_vertex_file = dirname+"/output_meshes/"+filename+"/image_cell_vertex.dict"
 image_cell_vertex = pickle.load(open(cell_vertex_file,'rb'))
 image_cell_vertex = dict(zip(image_cell_vertex.keys(),np.array(image_cell_vertex.values())*idra.resolution))
 
-quality_criteria=["Mesh Complexity","Triangle Area Deviation","Triangle Eccentricity","Cell Volume Error","Vertex Distance","Cell Convexity","Epidermis Cell Angle","Vertex Valence","Cell 2 Adjacency"]
+from openalea.mesh.utils.image_tools import compute_topomesh_image
+topomesh_img = compute_topomesh_image(image_topomesh,idra.segmented_image)
+world.add(topomesh_img,"CGAL_image",colormap="glasbey",alphamap="constant",bg_id=1)
+
+quality_criteria=["Mesh Complexity","Triangle Area Deviation","Triangle Eccentricity","Vertex Valence","Image Accuracy","Vertex Distance","Cell 2 Adjacency","Cell Convexity","Epidermis Cell Angle","Cell Cliques"]
 cgal_quality = evaluate_topomesh_quality(image_topomesh,quality_criteria,image=idra.segmented_image,image_cell_vertex=image_cell_vertex,image_labels=idra.image_labels,image_cell_volumes=idra.image_cell_volumes)
 
 from vplants.meshing.cute_plot import spider_plot
@@ -49,7 +53,10 @@ spider_plot(figure,np.array([cgal_quality[c] for c in quality_criteria]),color1=
 plt.show(block=False)
 raw_input()
 
-optimized_topomesh = optimize_topomesh(image_topomesh,omega_forces={'regularization':0.00,'laplacian':1.0,'planarization':0.27,'epidermis_planarization':0.27},cell_vertex_motion=True,image_cell_vertex=image_cell_vertex,edge_flip=True,iterations=20)
+
+
+
+optimized_topomesh = optimize_topomesh(image_topomesh,omega_forces={'regularization':0.01,'laplacian':1.0,'planarization':0.27,'epidermis_planarization':0.27},cell_vertex_motion=True,image_cell_vertex=image_cell_vertex,edge_flip=True,iterations=20)
 world.add(optimized_topomesh,"STEM_topomesh")
 optimized_quality = evaluate_topomesh_quality(optimized_topomesh,quality_criteria,image=idra.segmented_image,image_cell_vertex=image_cell_vertex,image_labels=idra.image_labels,image_cell_volumes=idra.image_cell_volumes)
 

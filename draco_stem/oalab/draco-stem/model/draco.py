@@ -5,6 +5,9 @@ from openalea.deploy.shared_data import shared_data
 
 from openalea.mesh.property_topomesh_io import save_ply_property_topomesh, read_ply_property_topomesh
 
+from openalea.image.serial.all import imread
+from openalea.image.spatial_image import SpatialImage
+
 import openalea.draco_stem.draco.dual_reconstruction
 reload(openalea.draco_stem.draco.dual_reconstruction)
 
@@ -17,10 +20,12 @@ from openalea.oalab.colormap.colormap_def import load_colormaps
 world.clear()
 
 import vplants.meshing_data
-#filename = "p194-t2_imgSeg_SegExp_CellShapeCorr"
+filename = "p194-t3_imgSeg_SegExp_CellShapeCorr"
+
+
 #filename = "rs01_wt_t00_seg"
 #filename = "segmentation"
-filename = "olli01_lti6b_150421_sam01_t000_seg_hmin_2"
+#filename = "olli01_lti6b_150421_sam01_t000_seg_hmin_2"
 dirname = shared_data(vplants.meshing_data)
 meshing_dirname =  dirname.parent.parent
 
@@ -30,208 +35,225 @@ if not os.path.exists(dirname+"/output_meshes/"+filename):
 
 inputfile = dirname+"/segmented_images/"+filename+".inr.gz"
 
-from openalea.image.serial.all import imread
-from openalea.image.spatial_image import SpatialImage
+#inputfile = "/Users/gcerutti/Developpement/openalea/openalea_marsalt/example/time_0_cut_seg_median.inr" 
+
 img = imread(inputfile)
-img = SpatialImage(np.concatenate([img[:,:,35:],np.ones((img.shape[0],img.shape[1],5))],axis=2).astype(np.uint16),resolution=img.resolution)
+#img[img==0]=1
+#img = SpatialImage(np.concatenate([img[:,:,35:],np.ones((img.shape[0],img.shape[1],5))],axis=2).astype(np.uint16),resolution=img.resolution)
 
 cell_vertex_file = dirname+"/output_meshes/"+filename+"/image_cell_vertex.dict"
 triangulation_file = dirname+"/output_meshes/"+filename+"/"+filename+"_draco_adjacency_complex.pkl"
 
-world.add(img,filename,colormap='glasbey',alphamap='constant',bg_id=1)
+from openalea.container import array_dict
 
-#draco = DracoMesh(image_file=inputfile, image_cell_vertex_file=cell_vertex_file, triangulation_file=triangulation_file)
+# size = 50
+# img = np.ones((size,size,size),np.uint8)
+
+# points = {}
+# points[11] = np.array([1,0,0],float)*size
+# points[12] = np.array([0,1,0],float)*size
+# points[31] = np.array([0,0,1],float)*size
+# points[59] = np.array([1,1,1],float)*size
+# points = array_dict(points)
+# #img[10:50,10:50,30:50] = 59
+# #img[10:30,10:50,10:30] = 12
+# #img[30:50,10:30,10:30] = 11
+# #img[30:50,30:50,10:30] = 31
+
+# center = np.array([[size/2,size/2,size/2]],float)
+
+# from scipy.cluster.vq import vq
+
+# coords = np.transpose(np.mgrid[0:size,0:size,0:size],(1,2,3,0)).reshape((np.power(size,3),3))
+# labels = points.keys()[vq(coords,points.values())[0]]
+
+# ext_coords = coords[vq(coords,center)[1]>size/2.]
+
+# img[tuple(np.transpose(coords))] = labels
+# #img[tuple(np.transpose(ext_coords))] = 1
+# img = SpatialImage(img,resolution=(1,1,1))
+
+
+world.add(img,"segmented_image",colormap='glasbey',alphamap='constant',bg_id=1)
+
+draco = DracoMesh(image=img, image_cell_vertex_file=cell_vertex_file, triangulation_file=triangulation_file)
 #draco = DracoMesh(image_file=inputfile, image_cell_vertex_file=cell_vertex_file)
-draco = DracoMesh(image=img)
+#draco = DracoMesh(image=img)
 
-world.add(draco.segmented_image,filename,colormap='glasbey',alphamap='constant',bg_id=1)
+#world.add(draco.segmented_image-(draco.segmented_image==1),'segmented_image',colormap='glasbey',alphamap='constant',bg_id=0)
 world.add(draco.point_topomesh,'image_cells')
+world['image_cells_vertices'].set_attribute('point_radius',img.max())
 #world.add(draco.layer_edge_topomesh['L1'],'L1_adjacency')
 #world.add(draco.image_cell_vertex_topomesh,'image_cell_vertex')
+
+# cube_points = {}
+# cube_points[0] = np.array([0,0,0])*size
+# cube_points[1] = np.array([1,0,0])*size
+# cube_points[2] = np.array([0,1,0])*size
+# cube_points[3] = np.array([0,0,1])*size
+# cube_points[4] = np.array([1,1,0])*size
+# cube_points[5] = np.array([0,1,1])*size
+# cube_points[6] = np.array([1,0,1])*size
+# cube_points[7] = np.array([1,1,1])*size
+
+# cube_edges = []
+# cube_edges += [[0,1]]
+# cube_edges += [[0,2]]
+# cube_edges += [[0,3]]
+# cube_edges += [[1,4]]
+# cube_edges += [[1,6]]
+# cube_edges += [[2,4]]
+# cube_edges += [[2,5]]
+# cube_edges += [[3,5]]
+# cube_edges += [[3,6]]
+# cube_edges += [[4,7]]
+# cube_edges += [[5,7]]
+# cube_edges += [[6,7]]
+
+# from openalea.mesh.property_topomesh_creation import edge_topomesh
+# world.add(edge_topomesh(cube_edges,cube_points),"box")
+
 raw_input()
 
-#draco.delaunay_adjacency_complex()
-#draco.layer_adjacency_complex('L1')
-draco.construct_adjacency_complex()
-#draco.adjacency_complex_optimization(n_iterations=1)
-
-world.add(draco.triangulation_topomesh,'cell_adjacency_complex')
-world['cell_adjacency_complex_cells'].set_attribute('intensity_range',(-1,0))
-world['cell_adjacency_complex_cells'].set_attribute('polydata_colormap',load_colormaps()['grey'])
-world['cell_adjacency_complex'].set_attribute('coef_3',0.95)
-
-from scipy.cluster.vq import vq
 from copy import deepcopy
-from openalea.container import array_dict
-from openalea.mesh import PropertyTopomesh
-from openalea.mesh.property_topomesh_creation import edge_topomesh, triangle_topomesh
-from openalea.draco_stem.draco.adjacency_complex_optimization import triangles_from_adjacency_edges
-from openalea.mesh.utils.array_tools import array_unique
-from openalea.mesh.property_topomesh_analysis import compute_topomesh_property
-from openalea.mesh.utils.intersection_tools import intersecting_triangle
+
+
+#draco.delaunay_adjacency_complex(surface_cleaning_criteria = [])
+
+draco.delaunay_adjacency_complex(surface_cleaning_criteria = ['surface','sliver','distance'])
 
 triangulation_topomesh = deepcopy(draco.triangulation_topomesh)
-cell_layer = deepcopy(draco.point_topomesh.wisp_property('layer',0))
-positions = deepcopy(draco.point_topomesh.wisp_property('barycenter',0))
-image_graph = deepcopy(draco.image_graph)
-img_wall_surfaces = deepcopy(draco.image_wall_surfaces)
-img_volumes = deepcopy(draco.image_cell_volumes)
-image_cell_vertex = deepcopy(draco.image_cell_vertex)
 
-L2_edges = np.array([[(c,n) for n in triangulation_topomesh.region_neighbors(0,c) if n>1 and cell_layer[n]==2] for c in triangulation_topomesh.wisps(0) if cell_layer[c]==2])
-L2_edges = np.concatenate([e for e in L2_edges if len(e)>0])
-L2_edges = L2_edges[L2_edges[:,1]>L2_edges[:,0]]
-L2_edge_topomesh = edge_topomesh(L2_edges, positions)
-#world.add(L2_edge_topomesh,"L2_neighborhood")
+from openalea.cellcomplex.property_topomesh.property_topomesh_analysis import epidermis_topomesh, clean_topomesh
 
-L2_L3_edges = np.array([[(c,n) for n in image_graph.vertices() if n>1 and cell_layer[n] in [0] and np.linalg.norm(positions[c]-positions[n])<20. ] for c in cell_layer.keys() if cell_layer[c] in [2]])
-L2_L3_edges = array_unique(np.sort(np.concatenate([e for e in L2_L3_edges if len(e)>0])))
-L2_L3_edge_topomesh = edge_topomesh(L2_L3_edges, positions)
-world.add(L2_L3_edge_topomesh,"L2_L3_neighborhood")
+triangulation_topomesh = epidermis_topomesh(triangulation_topomesh)
 
-L3_edges = np.array([[(c,n) for n in image_graph.neighbors(c) if n>1 and cell_layer[n] in [0]] for c in cell_layer.keys() if cell_layer[c] in [0]])
-L3_edges = array_unique(np.sort(np.concatenate([e for e in L3_edges if len(e)>0])))
-L3_edge_topomesh = edge_topomesh(L3_edges, positions)
-world.add(L3_edge_topomesh,"L3_neighborhood")
+triangulation_triangles = np.array([list(triangulation_topomesh.borders(2,t,2)) for t in triangulation_topomesh.wisps(2)])
+not_L1_triangles = np.array(list(triangulation_topomesh.wisps(2)))[np.sum(draco.cell_layer.values(triangulation_triangles) == 1,axis=1)<2]
+for t in not_L1_triangles:
+    triangulation_topomesh.remove_wisp(2,t)
 
-L3_additional_edges = np.array([[(c,n) for n in np.unique(np.array(image_cell_vertex.keys())[np.where(np.array(image_cell_vertex.keys())==c)[0]])  if n>1 and n!=c and (n not in image_graph.neighbors(c)) and (cell_layer[n] in [0])] for c in cell_layer.keys() if cell_layer[c] in [0]])
-L3_additional_edges = array_unique(np.sort(np.concatenate([e for e in L3_additional_edges if len(e)>0])))
+clean_topomesh(triangulation_topomesh)
 
-layer_triangle_topomesh = triangle_topomesh(triangles_from_adjacency_edges(array_unique(np.concatenate([L2_edges,L2_L3_edges,L3_edges,L3_additional_edges]))),positions)
-world.add(layer_triangle_topomesh,'L2_L3_neighborhood')
+triangulation_cells = list(triangulation_topomesh.wisps(3))
+for c in triangulation_cells:
+    triangulation_topomesh.remove_wisp(3,c)
+
+world.add(triangulation_topomesh,'cell_adjacency_complex')
+world['cell_adjacency_complex'].set_attribute('display_3',False)
+world['cell_adjacency_complex'].set_attribute('display_1',True)
+world['cell_adjacency_complex_edges'].set_attribute('polydata_colormap',load_colormaps()['invert_grey'])
+world['cell_adjacency_complex_edges'].set_attribute('intensity_range',(-1,0))
+#world['cell_adjacency_complex'].set_attribute('coef_2',0.98)
+#world['cell_adjacency_complex_faces'].set_attribute('x_slice',(30,70))
+world['cell_adjacency_complex_edges'].set_attribute('display_colorbar',False)
+
+triangular = ['star','split']
+
+L1_draco = deepcopy(draco)
+L1_draco.triangulation_topomesh = triangulation_topomesh
+image_dual_topomesh = L1_draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=2)
+#image_dual_topomesh = draco.draco_topomesh(reconstruction_triangulation = triangular)
+
+world.add(image_dual_topomesh ,'dual_reconstuction')
+world['dual_reconstuction'].set_attribute('display_3',False)
+world['dual_reconstuction'].set_attribute('display_2',True)
+
+
+#draco.layer_adjacency_complex('L1')
+#draco.construct_adjacency_complex()
+#draco.adjacency_complex_optimization(n_iterations=2)
+
+
+#L1_topomesh = deepcopy(draco.triangulation_topomesh)
+world.add(L1_topomesh,'L1_adjacency_complex')
+world['L1_adjacency_complex'].set_attribute('display_3',False)
+world['L1_adjacency_complex'].set_attribute('display_2',True)
+world['L1_adjacency_complex_faces'].set_attribute('polydata_colormap',load_colormaps()['grey'])
+world['L1_adjacency_complex_faces'].set_attribute('intensity_range',(-1,0))
+world['L1_adjacency_complex'].set_attribute('coef_2',0.98)
+world['L1_adjacency_complex_faces'].set_attribute('x_slice',(30,70))
+world['L1_adjacency_complex_faces'].set_attribute('display_colorbar',False)
+world['L1_adjacency_complex_faces'].set_attribute('preserve_faces',True)
+world['L1_adjacency_complex'].set_attribute('display_0',True)
+world['L1_adjacency_complex_vertices'].set_attribute('point_radius',2.*draco.triangulation_topomesh.nb_wisps(0))
+world['L1_adjacency_complex_vertices'].set_attribute('x_slice',(30,70))
+world['L1_adjacency_complex_vertices'].set_attribute('display_colorbar',False)
+
+
+draco.triangulation_topomesh = L1_topomesh
+triangular= ['star']
+image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=2)
+#image_dual_topomesh = draco.draco_topomesh(reconstruction_triangulation = triangular)
+
+world.add(image_dual_topomesh ,'L1_dual_reconstuction')
 raw_input()
 
-#omega_criteria = {'distance':1.0,'wall_surface':2.0,'layer':500.0,'clique':10.0}
-omega_criteria = {'distance':1.0,'wall_surface':2.0,'layer':50.0,}
 
-compute_topomesh_property(layer_triangle_topomesh,'length',1)
-compute_topomesh_property(layer_triangle_topomesh,'borders',2)
-compute_topomesh_property(layer_triangle_topomesh,'perimeter',2)
+triangular_string = ""
+for t in triangular:
+    triangular_string += t+"_"
+topomesh_filename = dirname+"/output_meshes/"+filename+"/"+filename+"_draco_stem_L1_"+triangular_string+"topomesh.ply"
 
-if omega_criteria.has_key('wall_surface'):
-    #img_wall_surfaces = kwargs.get('wall_surfaces',None)
-    #img_volumes = kwargs.get('cell_volumes',dict(zip(positions.keys(),np.ones_like(positions.keys()))))
-    #assert layer_triangle_topomesh.has_wisp_property('wall_surface',1) or img_wall_surfaces is not None
-    if not layer_triangle_topomesh.has_wisp_property('wall_surface',1):
-        L2_L3_triangle_edge_vertices = np.array([np.sort([list(layer_triangle_topomesh.borders(1,e)) for e in layer_triangle_topomesh.borders(2,t)]) for t in layer_triangle_topomesh.wisps(2)])
-        L2_L3_triangle_edge_wall_surface = np.array([[-1. if tuple(e) not in img_wall_surfaces.keys() else img_wall_surfaces[tuple(e)]/np.power(img_volumes.values(e).mean(),2./3.) for e in t] for t in L2_L3_triangle_edge_vertices])
-        layer_triangle_topomesh.update_wisp_property('wall_surface',2,array_dict(L2_L3_triangle_edge_wall_surface.min(axis=1),list(layer_triangle_topomesh.wisps(2))))
-        #layer_triangle_topomesh = layer_triangle_topomesh
+save_ply_property_topomesh(image_dual_topomesh,topomesh_filename,color_faces=True)
 
-triangle_weights = np.zeros(layer_triangle_topomesh.nb_wisps(2))
-if omega_criteria.has_key('distance'):
-    triangle_weights += omega_criteria['distance']*np.exp(-np.power(layer_triangle_topomesh.wisp_property('length',1).values(layer_triangle_topomesh.wisp_property('borders',2).values()).max(axis=1)/15.0,1))
-if omega_criteria.has_key('wall_surface'):
-    triangle_weights += omega_criteria['wall_surface']*layer_triangle_topomesh.wisp_property('wall_surface',2).values() 
-if omega_criteria.has_key('layer'):
-    triangle_weights += omega_criteria['layer']*np.sum(cell_layer.values(layer_triangle_topomesh.wisp_property('vertices',2).values())==2,axis=1)
-triangle_weights = array_dict(triangle_weights,list(layer_triangle_topomesh.wisps(2)))
 
-triangle_neighbor_edges = [np.concatenate([list(set(layer_triangle_topomesh.region_neighbors(1,e)))+[e] for e in layer_triangle_topomesh.borders(2,t)]) for t in layer_triangle_topomesh.wisps(2)]
-triangle_neighbor_edge_triangles = [np.concatenate([list(layer_triangle_topomesh.regions(1,n_e)) for n_e in n_edges]) for n_edges in triangle_neighbor_edges]
-triangle_tetrahedra_triangles = [np.unique(t)[nd.sum(np.ones_like(t),t,index=np.unique(t))>5] for t in triangle_neighbor_edge_triangles]
+L1_file = "/Users/gcerutti/Developpement/openalea/openalea_meshing_data/share/data/output_meshes/p194-t3_imgSeg_SegExp_CellShapeCorr/p194-t3_imgSeg_SegExp_CellShapeCorr_triangulated_L1_star_remeshed_straight_temporal_properties_topomesh.pkl"
 
-if omega_criteria.has_key('clique'):
-    triangle_neighbor_weights = array_dict([triangle_weights.values(t).min() - omega_criteria['clique']*(len(t)-4) for t in triangle_tetrahedra_triangles],list(layer_triangle_topomesh.wisps(2)))
-else:
-    triangle_neighbor_weights = array_dict([triangle_weights.values(t).min() for t in triangle_tetrahedra_triangles],list(layer_triangle_topomesh.wisps(2)))
-triangle_tetrahedra_triangles = array_dict(triangle_tetrahedra_triangles,list(layer_triangle_topomesh.wisps(2)))
+image_dual_topomesh = pickle.load(open(L1_file,'r'))
 
-tetrahedrization_triangles = np.array(list(layer_triangle_topomesh.wisps(2)))[np.array(map(len,triangle_tetrahedra_triangles))>=4]
-    
-constructed_triangulation_topomesh = PropertyTopomesh(3)
 
-compute_topomesh_property(layer_triangle_topomesh,'vertices',2)
-layer_triangle_L2_cells = (cell_layer.values(layer_triangle_topomesh.wisp_property('vertices',2).values())==2).sum(axis=1)
-L2_triangles = np.array(list(layer_triangle_topomesh.wisps(2)))[layer_triangle_L2_cells==3]
+#L1_L2_topomesh = deepcopy(draco.triangulation_topomesh)
+world.add(L1_L2_topomesh,'L1_L2_adjacency_complex')
+world['L1_L2_adjacency_complex_cells'].set_attribute('polydata_colormap',load_colormaps()['grey'])
+world['L1_L2_adjacency_complex_cells'].set_attribute('intensity_range',(-1,0))
+world['L1_L2_adjacency_complex'].set_attribute('coef_3',0.95)
+world['L1_L2_adjacency_complex_cells'].set_attribute('x_slice',(30,70))
+world['L1_L2_adjacency_complex_cells'].set_attribute('display_colorbar',False)
+world['L1_L2_adjacency_complex_cells'].set_attribute('preserve_faces',True)
+world['L1_L2_adjacency_complex'].set_attribute('display_0',True)
+world['L1_L2_adjacency_complex_vertices'].set_attribute('point_radius',1.5*L1_L2_topomesh.nb_wisps(0))
+world['L1_L2_adjacency_complex_vertices'].set_attribute('x_slice',(30,70))
+world['L1_L2_adjacency_complex_vertices'].set_attribute('display_colorbar',False)
 
-free_triangles = list(L2_triangles[np.argsort(-triangle_neighbor_weights.values(L2_triangles))])
-prev_n = 0
+draco.triangulation_topomesh = L1_L2_topomesh
+triangular= ['star','remeshed','projected','exact','flat']
+image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3)
+#image_dual_topomesh = draco.draco_topomesh(reconstruction_triangulation = triangular)
+world.add(image_dual_topomesh ,'L1_L2_dual_reconstuction')
+raw_input()
 
-while len(free_triangles) > 0:
-    fid_to_add = free_triangles.pop(0)
-    print "--> Triangle",list(layer_triangle_topomesh.borders(2,fid_to_add))," : ",triangle_neighbor_weights[fid_to_add]
-    
-    triangle_vertex_edges = np.concatenate([list(set(layer_triangle_topomesh.regions(0,c)).difference(set(layer_triangle_topomesh.borders(2,fid_to_add)))) for c in layer_triangle_topomesh.borders(2,fid_to_add,2)])
-    triangle_vertex_edge_vertices = np.concatenate([c*np.ones(layer_triangle_topomesh.nb_regions(0,c)-2) for c in layer_triangle_topomesh.borders(2,fid_to_add,2)])
-    triangle_vertex_edge_neighbor_vertices = np.array([list(set(layer_triangle_topomesh.borders(1,e)).difference({v}))[0] for e,v in zip(triangle_vertex_edges,triangle_vertex_edge_vertices)])
+from copy import deepcopy
+triangulation_topomesh = deepcopy(draco.triangulation_topomesh)
+world.add(triangulation_topomesh,'cell_adjacency_complex')
+world['cell_adjacency_complex_cells'].set_attribute('polydata_colormap',load_colormaps()['grey'])
+world['cell_adjacency_complex_cells'].set_attribute('intensity_range',(-1,0))
+world['cell_adjacency_complex'].set_attribute('coef_3',0.95)
+world['cell_adjacency_complex_cells'].set_attribute('x_slice',(50,100))
+world['cell_adjacency_complex_cells'].set_attribute('display_colorbar',False)
+world['cell_adjacency_complex_cells'].set_attribute('preserve_faces',True)
+world['cell_adjacency_complex'].set_attribute('display_0',True)
+world['cell_adjacency_complex_vertices'].set_attribute('point_radius',draco.triangulation_topomesh.nb_wisps(0))
+world['cell_adjacency_complex_vertices'].set_attribute('x_slice',(50,100))
+world['cell_adjacency_complex_vertices'].set_attribute('display_colorbar',False)
 
-    candidate_tetra_vertices = np.unique(triangle_vertex_edge_neighbor_vertices)[nd.sum(np.ones_like(triangle_vertex_edge_neighbor_vertices),triangle_vertex_edge_neighbor_vertices,index=np.unique(triangle_vertex_edge_neighbor_vertices))==3]
-    candidate_tetra_edges = np.array([triangle_vertex_edges[triangle_vertex_edge_neighbor_vertices==c] for c in candidate_tetra_vertices])
-    
-    candidate_tetra_edge_triangles = [np.concatenate([list(set(layer_triangle_topomesh.regions(1,e)).difference({fid_to_add})) for e in candidate_edges]) for candidate_edges in candidate_tetra_edges]
-    candidate_tetra_triangles = np.array([np.concatenate([[fid_to_add],np.unique(t)[nd.sum(np.ones_like(t),t,index=np.unique(t))==2]]) for t in candidate_tetra_edge_triangles])
-    
-    if len(candidate_tetra_triangles)>0:
-        candidate_tetra_free_triangles = np.array([np.sum([t in free_triangles for t in tetra_triangles]) for tetra_triangles in candidate_tetra_triangles])
-        candidate_tetra_triangle_weights = triangle_weights.values(candidate_tetra_triangles[:,1:]).min(axis=1)
-        
-        if (candidate_tetra_free_triangles == candidate_tetra_free_triangles.max()).sum() == 1:
-            sorted_candidate_tetra_triangles = candidate_tetra_triangles[np.argsort(-candidate_tetra_free_triangles)]
-        else:
-            sorted_candidate_tetra_triangles = candidate_tetra_triangles[np.argsort(-candidate_tetra_triangle_weights)]
-        
-        for tetra_triangles in sorted_candidate_tetra_triangles:
-            if np.all(np.array([0 if not constructed_triangulation_topomesh.has_wisp(2,t) else constructed_triangulation_topomesh.nb_regions(2,t) for t in tetra_triangles])<2):
-                tetra_vertices = np.unique([list(layer_triangle_topomesh.borders(2,t,2)) for t in tetra_triangles])
-                tetra_edges = np.unique([list(layer_triangle_topomesh.borders(2,t)) for t in tetra_triangles])
-                if constructed_triangulation_topomesh.nb_wisps(3)!=1 or vq(np.sort([tetra_vertices]),np.sort([list(constructed_triangulation_topomesh.borders(3,t,3)) for t in constructed_triangulation_topomesh.wisps(3)]))[1][0]>0:
-                    #if len(np.unique(cell_layer.values(tetra_vertices)))==2:
-                    if True:
-                        #tetra_triangle_tetras = np.unique([list(constructed_triangulation_topomesh.regions(2,t)) for t in tetra_triangles if constructed_triangulation_topomesh.has_wisp(2,t)])
-                        tetra_triangle_tetras = np.array(list(constructed_triangulation_topomesh.wisps(3)))
-                        if len(tetra_triangle_tetras)>0:
-                            tetra_triangle_tetra_edges = np.unique([list(constructed_triangulation_topomesh.borders(3,t,2)) for t in tetra_triangle_tetras])
-                            tetra_triangle_points = positions.values(np.array([list(layer_triangle_topomesh.borders(2,t,2)) for t in tetra_triangles]))
-                            tetra_triangle_tetra_edge_points = positions.values(np.array([list(layer_triangle_topomesh.borders(1,e)) for e in tetra_triangle_tetra_edges]))
-                            tetra_triangle_intersection = np.ravel([intersecting_triangle(edge_points,tetra_triangle_points) for edge_points in tetra_triangle_tetra_edge_points])
-                        
-                            tetra_triangle_edges = np.unique([list(layer_triangle_topomesh.borders(2,t)) for t in tetra_triangles])
-                            tetra_triangle_tetra_triangles = np.unique([list(constructed_triangulation_topomesh.borders(3,t)) for t in tetra_triangle_tetras])
-                            tetra_triangle_edge_points = positions.values(np.array([list(layer_triangle_topomesh.borders(1,e)) for e in tetra_triangle_edges]))
-                            tetra_triangle_tetra_triangle_points = positions.values(np.array([list(layer_triangle_topomesh.borders(2,t,2)) for t in tetra_triangle_tetra_triangles]))
-                            tetra_edge_intersection = np.ravel([intersecting_triangle(edge_points,tetra_triangle_tetra_triangle_points) for edge_points in tetra_triangle_edge_points])
-                            tetra_triangle_intersection = np.concatenate([tetra_triangle_intersection,tetra_edge_intersection])
-                        else:
-                            tetra_triangle_intersection = [False]
-                        if not np.any(tetra_triangle_intersection):
-                            tid = constructed_triangulation_topomesh.add_wisp(3)
-                            print "  --> Tetrahedron",tid,tetra_vertices," : ", triangle_weights.values(tetra_triangles[1:]).min()
-                            for c in tetra_vertices:
-                                if not constructed_triangulation_topomesh.has_wisp(0,c):
-                                    constructed_triangulation_topomesh.add_wisp(0,c)
-                            for e in tetra_edges:
-                                if not constructed_triangulation_topomesh.has_wisp(1,e):
-                                    constructed_triangulation_topomesh.add_wisp(1,e)
-                                    for c in layer_triangle_topomesh.borders(1,e):
-                                        constructed_triangulation_topomesh.link(1,e,c)
-                            for t in tetra_triangles:
-                                if not constructed_triangulation_topomesh.has_wisp(2,t):
-                                    constructed_triangulation_topomesh.add_wisp(2,t)
-                                    for e in layer_triangle_topomesh.borders(2,t):
-                                        constructed_triangulation_topomesh.link(2,t,e)
-                                constructed_triangulation_topomesh.link(3,tid,t)
-                                
-                                #if constructed_triangulation_topomesh.nb_regions(2,t)<2 and len(np.unique(cell_layer.values(list(constructed_triangulation_topomesh.borders(2,t,2)))))==2:
-                                if constructed_triangulation_topomesh.nb_regions(2,t)<2:
-                                    if not t in free_triangles:
-                                        free_triangles.append(t)
-                                    
-                                    triangle_future_tetra_triangles = list(set(triangle_tetrahedra_triangles[t]).difference(set(constructed_triangulation_topomesh.wisps(2)).difference(set(free_triangles))))
-                                    
-                                    if omega_criteria.has_key('clique'):
-                                        triangle_neighbor_weights[t] = np.min(triangle_weights.values(triangle_future_tetra_triangles)) - omega_criteria['clique']*(len(triangle_future_tetra_triangles)-4)
-                                    else:
-                                        triangle_neighbor_weights[t] = np.min(triangle_weights.values(triangle_future_tetra_triangles))
-    
-    if constructed_triangulation_topomesh.nb_wisps(3)>0:
-        free_triangles = list(np.array(free_triangles)[np.argsort(-triangle_neighbor_weights.values(free_triangles))])
-        constructed_triangulation_topomesh.update_wisp_property('barycenter',0,array_dict(positions.values(list(constructed_triangulation_topomesh.wisps(0))),list(constructed_triangulation_topomesh.wisps(0))))
-    if constructed_triangulation_topomesh.nb_wisps(3)%100 == 1 and constructed_triangulation_topomesh.nb_wisps(3)!=prev_n:
-        prev_n = constructed_triangulation_topomesh.nb_wisps(3)
-        world.add(constructed_triangulation_topomesh,'triangulation_topomesh')
-        #raw_input()
+#delaunay_topomesh = deepcopy(draco.delaunay_topomesh)
+world.add(delaunay_topomesh,'delaunay_complex')
+world['delaunay_complex_cells'].set_attribute('polydata_colormap',load_colormaps()['grey'])
+world['delaunay_complex_cells'].set_attribute('intensity_range',(-1,0))
+world['delaunay_complex'].set_attribute('coef_3',0.95)
+world['delaunay_complex_cells'].set_attribute('x_slice',(50,100))
+world['delaunay_complex_cells'].set_attribute('display_colorbar',False)
+world['delaunay_complex_cells'].set_attribute('preserve_faces',True)
 
+#cleaned_delaunay_topomesh = deepcopy(draco.delaunay_topomesh)
+world.add(cleaned_delaunay_topomesh,'cleaned_delaunay_complex')
+world['cleaned_delaunay_complex_cells'].set_attribute('polydata_colormap',load_colormaps()['grey'])
+world['cleaned_delaunay_complex_cells'].set_attribute('intensity_range',(-1,0))
+world['cleaned_delaunay_complex'].set_attribute('coef_3',0.95)
+world['cleaned_delaunay_complex_cells'].set_attribute('x_slice',(50,100))
+world['cleaned_delaunay_complex_cells'].set_attribute('display_colorbar',False)
+world['cleaned_delaunay_complex_cells'].set_attribute('preserve_faces',True)
 
 import openalea.draco_stem.stem.tissue_mesh_optimization
 reload(openalea.draco_stem.stem.tissue_mesh_optimization)
@@ -240,34 +262,72 @@ from openalea.draco_stem.stem.tissue_mesh_optimization import optimize_topomesh
 from openalea.mesh.property_topomesh_io import save_property_topomesh
 save_property_topomesh(draco.triangulation_topomesh,triangulation_file,original_pids=True)
 
-#triangular = ['star','remeshed','projected','straight']
-triangular = ['star','remeshed','projected','flat']
+#triangular = ['star','remeshed','straight']
+#triangular = ['star','remeshed','projected','flat']
 #triangular = ['star','remeshed','projected','exact','flat']
-#triangular= ['star','flat']
+
+draco.triangulation_topomesh = triangulation_topomesh
+triangular= ['star','flat']
+
+triangular = ['star']
 image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3)
 #image_dual_topomesh = draco.draco_topomesh(reconstruction_triangulation = triangular)
+
+world.add(image_dual_topomesh ,'dual_reconstuction')
+
+import openalea.draco_stem.stem.tissue_mesh_quality
+reload(openalea.draco_stem.stem.tissue_mesh_quality)
+from openalea.draco_stem.stem.tissue_mesh_quality import evaluate_topomesh_quality
+
+quality_criteria=["Mesh Complexity","Triangle Area Deviation","Triangle Eccentricity","Vertex Valence","Image Accuracy","Vertex Distance","Cell 2 Adjacency","Cell Convexity","Epidermis Cell Angle","Cell Cliques"]
+dual_quality = evaluate_topomesh_quality(image_dual_topomesh,quality_criteria,image=draco.segmented_image,image_cell_vertex=draco.image_cell_vertex,image_labels=draco.image_labels,image_cell_volumes=draco.image_cell_volumes,image_graph=draco.image_graph)
+
+from vplants.meshing.cute_plot import spider_plot
+import matplotlib.pyplot as plt
+
+figure = plt.figure(2)
+figure.clf()
+spider_plot(figure,np.array([dual_quality[c] for c in quality_criteria]),color1=np.array([0.3,0.6,1.]),color2=np.array([1.,0.,0.]),xlabels=quality_criteria,ytargets=0.8 * np.ones_like(quality_criteria,float),n_points=100*len(quality_criteria),linewidth=2,smooth_factor=0.0,spline_order=1)
+plt.show(block=False)
+raw_input()
 
 triangular_string = ""
 for t in triangular:
     triangular_string += t+"_"
-topomesh_filename = dirname+"/output_meshes/"+filename+"/"+filename+"_L1"+triangular_string+"_topomesh.ply"
+topomesh_filename = dirname+"/output_meshes/"+filename+"/"+filename+"_"+triangular_string+"topomesh.ply"
+
 save_ply_property_topomesh(image_dual_topomesh,topomesh_filename,color_faces=True)
 
-world.add(image_dual_topomesh ,'dual_reconstuction')
+from openalea.mesh.property_topomesh_analysis import compute_topomesh_property, compute_topomesh_vertex_property_from_faces
+compute_topomesh_property(image_dual_topomesh,'eccentricity',2)
+compute_topomesh_vertex_property_from_faces(image_dual_topomesh,'eccentricity',weighting='uniform')
+
+
+world.add(image_dual_topomesh ,'actual_dual_reconstuction')
 raw_input()
 
-raw_file = "/Users/gcerutti/Developpement/openalea/openalea_meshing_data/share/data/nuclei_images/olli01_lti6b_150421_sam01_t000/olli01_lti6b_150421_sam01_t000_PIN.inr.gz"
-raw_img = imread(raw_file)
-raw_img = SpatialImage(np.concatenate([raw_img[:,:,35:],np.ones((raw_img.shape[0],raw_img.shape[1],5))],axis=2).astype(np.uint16),resolution=raw_img.resolution)
-world.add(raw_img,"raw_image")
+# raw_file = "/Users/gcerutti/Developpement/openalea/openalea_meshing_data/share/data/nuclei_images/olli01_lti6b_150421_sam01_t000/olli01_lti6b_150421_sam01_t000_PIN.inr.gz"
+# raw_img = imread(raw_file)
+# raw_img = SpatialImage(np.concatenate([raw_img[:,:,35:],np.ones((raw_img.shape[0],raw_img.shape[1],5))],axis=2).astype(np.uint16),resolution=raw_img.resolution)
+# world.add(raw_img,"raw_image")
 
 
 from openalea.draco_stem.stem.tissue_mesh_quality import evaluate_topomesh_quality
 quality_criteria=["Mesh Complexity","Triangle Area Deviation","Triangle Eccentricity","Cell Volume Error","Vertex Distance","Cell Convexity","Epidermis Cell Angle","Vertex Valence","Cell 2 Adjacency"]
 draco_quality = evaluate_topomesh_quality(image_dual_topomesh,quality_criteria,image=draco.segmented_image,image_cell_vertex=draco.image_cell_vertex,image_labels=draco.image_labels,image_cell_volumes=draco.image_cell_volumes)
 
-from vplants.meshing.cute_plot import spider_plot
+from vplants.meshing.cute_plot import spider_plot, histo_plot
 import matplotlib.pyplot as plt
+
+figure = plt.figure(0)
+figure.clf()
+histo_plot(figure,image_dual_topomesh.wisp_property('eccentricity',2).values(),np.array([0.8,0.4,0.2]),xlabel="Triangle Eccentricity",ylabel="Number of triangles (%)",cumul=False,bar=False)
+plt.show(block=False)
+
+figure = plt.figure(1)
+figure.clf()
+histo_plot(figure,image_dual_topomesh.wisp_property('area',2).values(),np.array([0.8,0.4,0.2]),xlabel="Triangle Area",ylabel="Number of triangles (%)",cumul=False,bar=False)
+plt.show(block=False)
 
 figure = plt.figure(2)
 figure.clf()
@@ -275,12 +335,32 @@ spider_plot(figure,np.array([draco_quality[c] for c in quality_criteria]),color1
 plt.show(block=False)
 raw_input()
 
+quality_file = open(dirname+"/output_meshes/"+filename+"/"+filename+"_draco_quality.csv","a+")
+quality_file.seek(0)
+if not quality_file.read(1):
+    quality_file.write("Reconstruction Triangulation;")
+    for q in quality_criteria:
+        quality_file.write(q+";")
+    quality_file.write("\n")
+quality_file.write(triangular_string[:-1]+";")
+for q in quality_criteria:
+    quality_file.write(str(draco_quality[q])+";")
+quality_file.write("\n")
+quality_file.flush()
+quality_file.close()
+
+eccentricity_file = dirname+"/output_meshes/"+filename+"/"+filename+"_"+triangular_string+"eccentricities.csv"
+np.savetxt(eccentricity_file,image_dual_topomesh.wisp_property('eccentricity',2).values(),delimiter=";")
+
+area_file = dirname+"/output_meshes/"+filename+"/"+filename+"_"+triangular_string+"areas.csv"
+np.savetxt(area_file,image_dual_topomesh.wisp_property('area',2).values(),delimiter=";")
+
 
 topomesh = read_ply_property_topomesh(topomesh_filename)
 world.add(topomesh,"reopened_topomesh")
 
 
-
+compute_topomesh_property('normal',2)
 
 
 
