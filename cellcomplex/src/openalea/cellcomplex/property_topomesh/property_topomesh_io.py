@@ -327,6 +327,7 @@ def save_ply_property_topomesh(topomesh,ply_filename,properties_to_save=dict([(0
         if property_name != coordinatepropname and topomesh.has_wisp_property(property_name,0,is_computed=True):
             property_type = property_types[str(topomesh.wisp_property(property_name,0).values().dtype)]
             ply_file.write("property "+property_type+" "+property_name+"\n")
+
     ply_file.write("element face "+str(topomesh.nb_wisps(2))+"\n")
     ply_file.write("property list int int vertex_index\n")
     if color_faces:
@@ -360,9 +361,9 @@ def save_ply_property_topomesh(topomesh,ply_filename,properties_to_save=dict([(0
             if property_name != coordinatepropname and topomesh.has_wisp_property(property_name,0,is_computed=True):
                 property_type = property_types[str(topomesh.wisp_property(property_name,0).values().dtype)]
                 if property_type == 'int':
-                    ply_file.write(str(int(topomesh.wisp_property(property_name,0)[fid]))+" ")
+                    ply_file.write(str(int(topomesh.wisp_property(property_name,0)[pid]))+" ")
                 else:
-                    ply_file.write(str(topomesh.wisp_property(property_name,0)[fid])+" ")
+                    ply_file.write(str(topomesh.wisp_property(property_name,0)[pid])+" ")
         ply_file.write("\n")
         vertex_index[pid] = v        
 
@@ -570,8 +571,12 @@ def read_ply_property_topomesh(ply_filename, verbose = True):
             triangle_matching = array_dict(vq(triangles,unique_triangles)[0],face_vertices.keys())
     else:
         triangular = False
-        unique_triangles = point_matching.values(faces)
-        triangle_matching = array_dict(face_vertices.keys(),face_vertices.keys())
+        if len(faces)>0:
+            unique_triangles = point_matching.values(faces)
+            triangle_matching = array_dict(face_vertices.keys(),face_vertices.keys())
+        else:
+            unique_triangles = np.array([])
+            triangle_matching = array_dict()
     element_matching['face'] = triangle_matching
     if verbose: print len(unique_triangles)," Unique Faces"
     if timecheck: print 'face unicity test:',time()-check_time 
@@ -598,12 +603,16 @@ def read_ply_property_topomesh(ply_filename, verbose = True):
         edge_faces = dict(zip(range(3*len(unique_triangles)),np.concatenate([fid*np.ones_like(unique_triangles[fid]) for fid in xrange(len(unique_triangles))])))
     if verbose: print len(edge_vertices)," Edges" 
 
-    unique_edges = array_unique(np.sort(edge_vertices.values()))
-    if len(unique_edges) == len(edge_vertices.values()):
-        unique_edges = edge_vertices.values()
-        edge_matching = array_dict(edge_vertices.keys(),edge_vertices.keys())
+    if len(edge_vertices)>0:
+        unique_edges = array_unique(np.sort(edge_vertices.values()))
+        if len(unique_edges) == len(edge_vertices.values()):
+            unique_edges = edge_vertices.values()
+            edge_matching = array_dict(edge_vertices.keys(),edge_vertices.keys())
+        else:
+            edge_matching = array_dict(vq(np.sort(edge_vertices.values()),unique_edges)[0],edge_vertices.keys())
     else:
-        edge_matching = array_dict(vq(np.sort(edge_vertices.values()),unique_edges)[0],edge_vertices.keys())
+        unique_edges = np.array([])
+        edge_matching = array_dict()
     element_matching['edge'] = edge_matching
     if verbose: print len(unique_edges)," Unique Edges"
     if timecheck: print 'edge unicity test:',time()-check_time 
