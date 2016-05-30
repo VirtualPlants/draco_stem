@@ -345,7 +345,7 @@ def topomesh_to_triangular_mesh(topomesh, degree=3, coef=1.0, mesh_center=None, 
         if property_name is not None:
             property_data = topomesh.wisp_property(property_name,property_degree).values()
         else:
-            property_data = np.array(topomesh.wisps(3))
+            property_data = np.array(list(topomesh.wisps(3)))
 
 
         vertices_positions = []
