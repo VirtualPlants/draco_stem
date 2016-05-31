@@ -30,6 +30,7 @@ from openalea.mesh.property_topomesh_analysis import *
 from openalea.mesh.utils.tissue_analysis_tools import cell_vertex_extraction
 from openalea.mesh.utils.array_tools import array_unique
 from openalea.container.topomesh_algo import is_collapse_topo_allowed, collapse_edge
+from vplants.tissue_analysis.temporal_graph_from_image import graph_from_image
 
 
 from time                                   import time
@@ -103,9 +104,10 @@ def evaluate_topomesh_quality(topomesh,quality_criteria=["Mesh Complexity","Tria
 
 
     if "Cell Volume Error" in quality_criteria or "Cell Convexity" in quality_criteria:
-        if triangular:
-            compute_topomesh_property(topomesh,'volume',degree=3)
+        compute_topomesh_property(topomesh,'volume',degree=3)
         compute_topomesh_property(topomesh,'convexhull_volume',degree=3)
+    
+    img_graph = kwargs.get('image_graph',None)
 
     if "Cell Volume Error" in quality_criteria:
         start_time = time()
@@ -131,6 +133,36 @@ def evaluate_topomesh_quality(topomesh,quality_criteria=["Mesh Complexity","Tria
         end_time = time()
         print "<-- Computing cell volume error        [",end_time-start_time,"s]"
 
+    if "Image Accuracy" in quality_criteria:
+        start_time = time()
+        print "--> Computing image accuracy"
+
+        from openalea.mesh.utils.image_tools import compute_topomesh_image
+
+        topomesh_img = compute_topomesh_image(topomesh,image)
+
+        cells_img = deepcopy(image)
+        for c in set(np.unique(image)).difference(set(topomesh.wisps(3))):
+            cells_img[image==c] = 1
+
+        true_positives = ((cells_img != 1)&(cells_img == topomesh_img)).sum()
+        false_positives = ((cells_img == 1) & (topomesh_img != 1)).sum() + ((cells_img != 1)&(topomesh_img != 1)&(cells_img != topomesh_img)).sum()
+        false_negatives = ((cells_img != 1) & (topomesh_img == 1)).sum() + ((cells_img != 1)&(topomesh_img != 1)&(cells_img != topomesh_img)).sum()
+        true_negatives = ((cells_img == 1)&(cells_img == topomesh_img)).sum()
+
+        estimators = {}
+        estimators['Precision'] = float(true_positives/float(true_positives+false_positives))
+        estimators['Recall'] = float(true_positives/float(true_positives+false_negatives))
+        estimators['Dice'] = float(2*true_positives/float(2*true_positives+false_positives+false_negatives))
+        estimators['Jaccard'] = float(true_positives/float(true_positives+false_positives+false_negatives))
+        estimators['Accuracy'] = float(true_positives+true_negatives)/float(true_positives+true_negatives+false_positives+false_negatives)
+        estimators['Identity'] = float((cells_img == topomesh_img).sum())/np.prod(cells_img.shape)
+        print estimators
+
+        quality_data["Image Accuracy"] = estimators['Dice']
+
+        end_time = time()
+        print "<-- Computing image accuracy           [",end_time-start_time,"s]"
 
     vertex_cell_neighbours = topomesh.wisp_property('cells',degree=0)
 
@@ -185,6 +217,8 @@ def evaluate_topomesh_quality(topomesh,quality_criteria=["Mesh Complexity","Tria
         #     image_cell_vertex[v] = image_cell_vertex[v]*np.array(image.resolution)
     
         image_cell_vertices = np.array(image_cell_vertex.values())
+        print mesh_cell_vertices[np.where(1-np.isnan(mesh_cell_vertices)[:,0])]*image.resolution
+        print image_cell_vertices*image.resolution
         vertex_distances_mesh = array_dict(vq(mesh_cell_vertices[np.where(1-np.isnan(mesh_cell_vertices)[:,0])]*image.resolution,image_cell_vertices*image.resolution)[1],cell_vertex)
         vertex_distances_image = vq(image_cell_vertices[np.where(1-np.isnan(image_cell_vertices)[:,0])],mesh_cell_vertices)[1]
 
@@ -295,6 +329,7 @@ def evaluate_topomesh_quality(topomesh,quality_criteria=["Mesh Complexity","Tria
         end_time = time()
         print "<-- Computing vertex degree            [",end_time-start_time,"s]"
 
+
     if "Cell 4 Adjacency" in quality_criteria:
         start_time = time()
         print "--> Computing cell adjacency"
@@ -354,6 +389,17 @@ def evaluate_topomesh_quality(topomesh,quality_criteria=["Mesh Complexity","Tria
         quality_data["Cell 2 Adjacency"] = cell_edge_jaccard
         end_time = time()
         print "<-- Computing cell adjacency           [",end_time-start_time,"s]"
+
+    if "Cell Cliques" in quality_criteria:
+
+        vertex_cells = np.array([len(list(topomesh.regions(0,v,3))) for v in topomesh.wisps(0)])
+        vertex_epidermis = topomesh.wisp_property('epidermis',degree=0).values()
+
+        cell_vertices = ((vertex_cells>=3)*(vertex_epidermis)+(vertex_cells>=4)*(True-vertex_epidermis)).sum()
+        clique_cell_vertices = ((vertex_cells>3)*(vertex_epidermis)+(vertex_cells>4)*(True-vertex_epidermis)).sum()
+
+        quality_data["Cell Cliques"] = 1.0 - float(clique_cell_vertices)/float(cell_vertices)
+
 
     print quality_data
 

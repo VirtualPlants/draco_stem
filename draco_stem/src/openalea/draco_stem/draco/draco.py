@@ -166,29 +166,33 @@ class DracoMesh(object):
 
         self.layer_edge_topomesh = {}
 
-        L1_edges = np.array([[(c,n) for n in self.image_graph.neighbors(c) if n>1 and self.cell_layer[n]==1] for c in self.cell_layer.keys() if self.cell_layer[c]==1])
-        L1_edges = np.concatenate([e for e in L1_edges if len(e)>0])
-        L1_edges = L1_edges[L1_edges[:,1]>L1_edges[:,0]]
-        L1_edge_topomesh = edge_topomesh(L1_edges, self.positions)
-        self.layer_edge_topomesh['L1'] = L1_edge_topomesh
+        if (self.cell_layer.values() == 1).sum() > 1:
+            L1_edges = np.array([[(c,n) for n in self.image_graph.neighbors(c) if n>1 and self.cell_layer[n]==1] for c in self.cell_layer.keys() if self.cell_layer[c]==1])
+            L1_edges = np.concatenate([e for e in L1_edges if len(e)>0])
+            L1_edges = L1_edges[L1_edges[:,1]>L1_edges[:,0]]
+            L1_edge_topomesh = edge_topomesh(L1_edges, self.positions)
+            self.layer_edge_topomesh['L1'] = L1_edge_topomesh
 
-        L2_edges = np.array([[(c,n) for n in self.image_graph.neighbors(c) if n>1 and self.cell_layer[n]==2] for c in self.cell_layer.keys() if self.cell_layer[c]==2])
-        L2_edges = np.concatenate([e for e in L2_edges if len(e)>0])
-        L2_edges = L2_edges[L2_edges[:,1]>L2_edges[:,0]]
-        L2_edge_topomesh = edge_topomesh(L2_edges, self.positions)
-        self.layer_edge_topomesh['L2'] = L2_edge_topomesh
+        if (self.cell_layer.values() == 2).sum() > 1:
+            L2_edges = np.array([[(c,n) for n in self.image_graph.neighbors(c) if n>1 and self.cell_layer[n]==2] for c in self.cell_layer.keys() if self.cell_layer[c]==2])
+            L2_edges = np.concatenate([e for e in L2_edges if len(e)>0])
+            L2_edges = L2_edges[L2_edges[:,1]>L2_edges[:,0]]
+            L2_edge_topomesh = edge_topomesh(L2_edges, self.positions)
+            self.layer_edge_topomesh['L2'] = L2_edge_topomesh
 
         self.layer_triangle_topomesh = {}
 
-        L1_L2_edges = np.array([[(c,n) for n in self.image_graph.neighbors(c) if n>1 and self.cell_layer[n] in [1,2]] for c in self.cell_layer.keys() if self.cell_layer[c] in [1,2]])
-        L1_L2_edges = np.concatenate([e for e in L1_L2_edges if len(e)>0])
-        L1_L2_edges = L1_L2_edges[L1_L2_edges[:,1]>L1_L2_edges[:,0]]
 
-        L1_L2_additional_edges = np.array([[(c,n) for n in np.unique(np.array(self.image_cell_vertex.keys())[np.where(np.array(self.image_cell_vertex.keys())==c)[0]])  if n>1 and n!=c and (n not in self.image_graph.neighbors(c)) and (self.cell_layer[n] in [1,2])] for c in self.cell_layer.keys() if self.cell_layer[c] in [1,2]])
-        L1_L2_additional_edges = np.concatenate([e for e in L1_L2_additional_edges if len(e)>0])
-        L1_L2_additional_edges = L1_L2_additional_edges[L1_L2_additional_edges[:,1]>L1_L2_additional_edges[:,0]]
+        if (self.cell_layer.values() == 1).sum() > 1 and (self.cell_layer.values() == 2).sum() > 1:
+            L1_L2_edges = np.array([[(c,n) for n in self.image_graph.neighbors(c) if n>1 and self.cell_layer[n] in [1,2]] for c in self.cell_layer.keys() if self.cell_layer[c] in [1,2]])
+            L1_L2_edges = np.concatenate([e for e in L1_L2_edges if len(e)>0])
+            L1_L2_edges = L1_L2_edges[L1_L2_edges[:,1]>L1_L2_edges[:,0]]
 
-        self.layer_triangle_topomesh['L1_L2'] =  triangle_topomesh(triangles_from_adjacency_edges(np.concatenate([L1_L2_edges,L1_L2_additional_edges])),self.positions)
+            L1_L2_additional_edges = np.array([[(c,n) for n in np.unique(np.array(self.image_cell_vertex.keys())[np.where(np.array(self.image_cell_vertex.keys())==c)[0]])  if n>1 and n!=c and (n not in self.image_graph.neighbors(c)) and (self.cell_layer[n] in [1,2])] for c in self.cell_layer.keys() if self.cell_layer[c] in [1,2]])
+            L1_L2_additional_edges = np.concatenate([e for e in L1_L2_additional_edges if len(e)>0])
+            L1_L2_additional_edges = L1_L2_additional_edges[L1_L2_additional_edges[:,1]>L1_L2_additional_edges[:,0]]
+
+            self.layer_triangle_topomesh['L1_L2'] =  triangle_topomesh(triangles_from_adjacency_edges(np.concatenate([L1_L2_edges,L1_L2_additional_edges])),self.positions)
 
 
     def delaunay_adjacency_complex(self, surface_cleaning_criteria = ['surface','exterior','distance','sliver']):
@@ -202,7 +206,8 @@ class DracoMesh(object):
             • 'sliver' : remove surface simplices that create flat tetrahedra (slivers)
         The DRACO adjacency complex is set to this Delaunay complex
         """      
-        self.delaunay_topomesh = delaunay_tetrahedrization_topomesh(self.positions, image_cell_vertex=self.image_cell_vertex, segmented_image=self.segmented_image, clean_surface=True, surface_cleaning_criteria=surface_cleaning_criteria)
+        clean_surface = len(surface_cleaning_criteria)>0
+        self.delaunay_topomesh = delaunay_tetrahedrization_topomesh(self.positions, image_cell_vertex=self.image_cell_vertex, segmented_image=self.segmented_image, clean_surface=clean_surface, surface_cleaning_criteria=surface_cleaning_criteria)
         clean_tetrahedrization(self.delaunay_topomesh, clean_vertices=False)
         discarded_cells = np.array(list(self.delaunay_topomesh.wisps(0)))[np.where(np.array(map(len,[list(self.delaunay_topomesh.regions(0,v,2)) for v in self.delaunay_topomesh.wisps(0)]))==0)[0]]
         for v in discarded_cells:
@@ -283,7 +288,7 @@ class DracoMesh(object):
         return self.surface_topomesh
 
 
-    def dual_reconstruction(self, reconstruction_triangulation=None, adjacency_complex_degree=3):
+    def dual_reconstruction(self, reconstruction_triangulation=None, adjacency_complex_degree=3, cell_vertex_constraint=True, maximal_edge_length=None):
         """
         Compute the dual geometry of the DRACO adjacency complex as a 3D interface mesh
         * "reconstruction_triangulation" : parameters of the interface triangulation method :
@@ -302,6 +307,8 @@ class DracoMesh(object):
                 - 'exact' : ensure cell vertices are well preserved during all geometrical optimization processes
             !!IF "reconstruction_triangulation" IS SET AS EMPTY A POLYGONAL INTERFACE MESH WILL BE RETURNED!!
         * "adjacency_complex_degree" : 2 or 3, whether the adjacency complex is made of single layer triangles or tetrahedra
+        * "cell_vertex_constraint" : bool, whether the cell corners should be constrained to their position in the image or not
+        * "maximal_edge_length" : float, in micrometers, the maximal length for the remeshing algorithm
         """
         if reconstruction_triangulation is not None:
             self.reconstruction_triangulation = reconstruction_triangulation
@@ -320,7 +327,7 @@ class DracoMesh(object):
             if self.triangulation_topomesh.has_wisp(3,1):
                 self.triangulation_topomesh.remove_wisp(3,1)
 
-        self.dual_reconstruction_topomesh = tetrahedra_dual_triangular_topomesh(self.triangulation_topomesh,triangular=self.reconstruction_triangulation,image_cell_vertex=self.image_cell_vertex, voronoi=True, vertex_motion=True, surface_topomesh=self.surface_topomesh)
+        self.dual_reconstruction_topomesh = tetrahedra_dual_triangular_topomesh(self.triangulation_topomesh,triangular=self.reconstruction_triangulation,image_cell_vertex=self.image_cell_vertex, voronoi=True, vertex_motion=cell_vertex_constraint, surface_topomesh=self.surface_topomesh, maximal_length=maximal_edge_length)
         
         if adjacency_complex_degree == 3:
             tetrahedrization_topomesh_remove_exterior(self.triangulation_topomesh)

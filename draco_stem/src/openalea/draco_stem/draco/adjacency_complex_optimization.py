@@ -701,7 +701,7 @@ def tetrahedrization_clean_surface(initial_triangulation_topomesh, image_cell_ve
                 image_edges = image_edges[image_edges.min(axis=1)!=1]
                 image_distances = np.linalg.norm(positions.values(image_edges[:,0]) - positions.values(image_edges[:,1]),axis=1)
                 #maximal_distance = image_distances.max()
-                maximal_distance = np.percentile(image_distances,98)
+                maximal_distance = np.percentile(image_distances,99)
             else:
                 maximal_distance = 15.
 
