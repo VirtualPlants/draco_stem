@@ -79,9 +79,9 @@ def triangle_topomesh(triangles, positions, **kwargs):
     triangles = np.array(triangles)
     positions = array_dict(positions)
 
-    edges = array_unique(np.concatenate(triangles[:,triangle_edge_list],axis=0))
+    edges = array_unique(np.sort(np.concatenate(triangles[:,triangle_edge_list],axis=0)))
 
-    triangle_edges = np.concatenate(triangles[:,triangle_edge_list])
+    triangle_edges = np.sort(np.concatenate(triangles[:,triangle_edge_list]))
 
     start_time = time()
     print "--> Generating triangle topomesh"

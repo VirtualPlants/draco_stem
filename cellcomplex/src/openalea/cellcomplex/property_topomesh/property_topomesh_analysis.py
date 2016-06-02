@@ -688,7 +688,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
         triangle_sinuses[:,1] = np.power(np.array(1.0 - np.power((triangle_edge_lengths[:,0]**2+triangle_edge_lengths[:,1]**2-triangle_edge_lengths[:,2]**2)/(2.0*triangle_edge_lengths[:,0]*triangle_edge_lengths[:,1]),2.0),np.float16),0.5)
         triangle_sinuses[:,2] = np.power(np.array(1.0 - np.power((triangle_edge_lengths[:,2]**2+triangle_edge_lengths[:,0]**2-triangle_edge_lengths[:,1]**2)/(2.0*triangle_edge_lengths[:,2]*triangle_edge_lengths[:,0]),2.0),np.float16),0.5)
 
-        triangle_sinus_eccentricities = 1.0 - (2.0*(triangle_sinuses[:,0]+triangle_sinuses[:,1]+triangle_sinuses[:,2]))/(3*np.sqrt(3))
+        triangle_sinus_eccentricities = 1.0 - (2.0*(triangle_sinuses[:,0]+triangle_sinuses[:,1]+triangle_sinuses[:,2]))/(3.*np.sqrt(3.))
         topomesh.update_wisp_property('eccentricity',degree=degree,values=triangle_sinus_eccentricities,keys=np.array(list(topomesh.wisps(degree))))
 
     if property_name == 'normal':
