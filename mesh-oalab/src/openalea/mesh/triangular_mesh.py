@@ -1,3 +1,0 @@
-import openalea.cellcomplex.triangular_mesh.triangular_mesh
-reload(openalea.cellcomplex.triangular_mesh.triangular_mesh)
-from openalea.cellcomplex.triangular_mesh.triangular_mesh import *

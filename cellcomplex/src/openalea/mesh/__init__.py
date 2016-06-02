@@ -8,4 +8,4 @@ pdir = os.path.abspath(pdir)
 
 __path__ = [pdir] + __path__[:]
 
-from openalea.my_mesh.__init__ import *
+from openalea.cellcomplex.property_topomesh.__init__ import *

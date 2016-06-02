@@ -24,29 +24,7 @@ from openalea.mesh.property_topomesh_creation import vertex_topomesh, edge_topom
 
 from openalea.container import array_dict
 
-
-def square_topomesh(side_length = 1):
-    points = {}
-    points[0] = [0,0,0]
-    points[1] = [side_length,0,0]
-    points[2] = [0,side_length,0]
-    points[3] = [side_length,side_length,0]
-
-    triangles = [[0,1,2],[3,2,1]]
-
-    return triangle_topomesh(triangles, points)
-
-def hexagon_topomesh(side_length = 1):
-    points = {}
-    points[0] = [0,0,0]
-    for p in xrange(6):
-        points[p+1] = [side_length*np.cos(p*np.pi/3.),side_length*np.sin(p*np.pi/3.),0]
-
-    triangles = []
-    for p in xrange(6):
-        triangles += [[0,p + 1,(p+1)%6 + 1]]
-
-    return triangle_topomesh(triangles, points)
+from example_topomesh import square_topomesh, hexagon_topomesh
 
 
 def test_length_property():
