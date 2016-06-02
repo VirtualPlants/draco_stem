@@ -1,55 +1,44 @@
-====== OpenAlea.cellcomplex ======
+# OpenAlea CellComplex Library
 
-**Authors** : XXX
+The Topological Plant Tissue datastructure
 
-**Institutes** : INRIA / CIRAD 
+###Authors
 
-**Status** : Python package 
-
-**License** : Cecill-C
-
-**URL** : http://openalea.gforge.inria.fr
-
-===== About =====
-
-=== Description ===
-
-OpenAlea.cellcomplex is a XXX
+Frédéric Boudon (`frederic.boudon@cirad.fr`)
+Guillaume Cerutti (`guillaume.cerutti@inria.fr`)
 
 
-
-=== Content ===
-
-The OpenAlea.cellcomplex package contains :
+####Institutes: `INRIA / CIRAD`
 
 
-===== Installation =====
+####License: `Cecill-C`
 
-=== Download ===
+###Description
 
-Go to http://gforge.inria.fr/frs/?group_id=79
+OpenAlea.CellComplex is a library providing data structures and algorithms to represent and analyze plant cell tissues in 3D. It offers an implementation of the topological structure of cellular complex as an Incidence Graph in a class named **PropertyTopomesh**.
 
-=== Requirements ===
+<img src="tissue.png" width="300">
 
-* Scons >= 1
-* SconsX
-* OpenAlea.Deploy
-* Boost.Python
+The structure comes with algorithms allowing to
+* Create a structure from more basic representations
+* Compute geometrical and topological properties and store them within the structure
+* Edit the structure by local topological operations
+* Read and export the structure from/to a standard PLY format (http://sainsburyworkshop2015.wikispaces.com/file/view/PlyFormat.pdf)
 
+###Requirements
 
-=== Installation ===
-
-
-=== Utilisation ===
-
-
-<code>
-python setup.py install
-</code>
+* SconsX (https://github.com/openalea/sconsx)
+* OpenAlea.Deploy (https://github.com/openalea/deploy)
+* OpenAlea (https://github.com/openalea/openalea)
+* OpenAlea.Container (https://github.com/openalea/openalea-components)
+* NumPy / SciPy
 
 
+###Installation
 
-===== Documentation =====
+```python
+python setup.py develop
+```
 
-http://openalea.gforge.inria.fr/doc/openalea/cellcomplex/doc/_build/html/contents.html
+
 
