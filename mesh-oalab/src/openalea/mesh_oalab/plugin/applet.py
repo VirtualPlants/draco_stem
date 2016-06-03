@@ -38,5 +38,5 @@ class TopomeshControl(AppletPlugin):
 
     def __call__(self):
         # Load and instantiate graphical component that actually provide feature
-        from openalea.mesh.widget.property_topomesh_panel import TopomeshControlPanel
+        from openalea.mesh_oalab.widget.property_topomesh_panel import TopomeshControlPanel
         return TopomeshControlPanel

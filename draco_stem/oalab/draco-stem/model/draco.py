@@ -124,7 +124,7 @@ draco.delaunay_adjacency_complex(surface_cleaning_criteria = ['surface','sliver'
 
 triangulation_topomesh = deepcopy(draco.triangulation_topomesh)
 
-from openalea.cellcomplex.property_topomesh.property_topomesh_analysis import epidermis_topomesh, clean_topomesh
+from openalea.cellcomplex.property_topomesh.property_topomesh_extraction import epidermis_topomesh, clean_topomesh
 
 triangulation_topomesh = epidermis_topomesh(triangulation_topomesh)
 

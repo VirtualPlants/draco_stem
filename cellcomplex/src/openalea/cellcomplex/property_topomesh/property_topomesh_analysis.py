@@ -25,7 +25,7 @@ from array                                  import array
 
 from openalea.container                     import PropertyTopomesh, array_dict
 
-from copy                                   import copy
+from copy                                   import copy, deepcopy
 from time                                   import time
 import os
 import sys
@@ -1237,6 +1237,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
     end_time = time()
     print "<-- Computing",property_name,"property (",degree,") [",end_time-start_time,"s]"
 
+
 def compute_topomesh_triangle_properties(topomesh,positions=None):
     """todo"""
 
@@ -1277,6 +1278,7 @@ def compute_topomesh_triangle_properties(topomesh,positions=None):
 
     end_time = time()
     print "<-- Computing triangle properties    [",end_time-start_time,"s]"
+
 
 def compute_topomesh_vertex_property_from_faces(topomesh,property_name,weighting='area',adjacency_sigma=0.5,neighborhood=1):
     """
@@ -1408,158 +1410,6 @@ def compute_topomesh_cell_property_from_faces(topomesh,property_name,weighting='
     print "<-- Computing cell property from faces [",end_time-start_time,"s]"
 
 
-def spatial_image_from_topomesh(topomesh,shape,offset=np.array([0.,0.,0.]),scale=1.0):
-    """"todo"""
-
-    start_time = time()
-    print "--> Drawing topomesh image"
-
-    if not topomesh.has_wisp_property('barycenter',degree=3,is_computed=True):
-        compute_topomesh_property(topomesh,'barycenter',degree=3)
-    if not topomesh.has_wisp_property('borders',degree=3,is_computed=True):
-        compute_topomesh_property(topomesh,'borders',degree=3)
-    if not topomesh.has_wisp_property('vertices',degree=2,is_computed=True):
-        compute_topomesh_property(topomesh,'vertices',degree=2)
-
-    if not topomesh.has_wisp_property('label',degree=3,is_computed=False):
-        topomesh.add_wisp_property('label',degree=3)
-    if not topomesh.has_wisp_property('label',degree=3,is_computed=True):
-        topomesh.update_wisp_property('label',degree=3,values=np.array(list(topomesh.wisps(3)))+1)
-
-    shape = tuple(np.array(shape)*scale)
-    topomesh_img = np.ones(shape,np.uint16)
-
-    # image_start_time = time()
-    # print "  --> Generating coordinates ",shape
-    # coords = np.mgrid[0:shape[0],0:shape[1],0:shape[2]]
-    # coords = np.rollaxis(np.rollaxis(np.rollaxis(coords,3),3),3)/scale - offset
-    # image_end_time = time()
-    # print "  <-- Generating coordinates [",image_end_time-image_start_time,"s]"
-
-    image_start_time = time()
-    print "  --> Computing tetrahedra "
-    cell_triangles = np.array(np.concatenate(topomesh.wisp_property('borders',degree=3).values()),int)
-    cell_tetrahedra_cells = np.array(np.concatenate([[c for t in topomesh.wisp_property('borders',degree=3)[c]] for c in topomesh.wisps(3)]),int)
-    cell_tetrahedra_labels = topomesh.wisp_property('label',degree=3).values(cell_tetrahedra_cells)
-    cell_triangle_vertices = topomesh.wisp_property('vertices',degree=2).values(cell_triangles)
-    cell_tetrahedra = np.concatenate([topomesh.wisp_property('barycenter',degree=3).values(cell_tetrahedra_cells)[:,np.newaxis], topomesh.wisp_property('barycenter',degree=0).values(cell_triangle_vertices)],axis=1)
-    image_end_time = time()
-    print "  <-- Computing tetrahedra (",cell_tetrahedra_cells.shape[0],") [",image_end_time-image_start_time,"s]"
-
-    image_start_time = time()
-    print "  --> Inverting matrices"
-    cell_tetra_matrix = np.transpose(np.array([cell_tetrahedra[:,1],cell_tetrahedra[:,2],cell_tetrahedra[:,3]]) - cell_tetrahedra[:,0],axes=(1,2,0))
-    cell_tetra_inv_matrix = np.linalg.inv(cell_tetra_matrix)
-    image_end_time = time()
-    print "  <-- Inverting matrices     [",image_end_time-image_start_time,"s]"
-
-    # image_start_time = time()
-    # print "  --> Detecting inner voxels"
-    # xyz = (coords[:,:,:,np.newaxis] - cell_tetrahedra[:,0][np.newaxis,np.newaxis,np.newaxis,:])
-    # lambdas = np.einsum('...ijk,...ik->...ij',cell_tetra_inv_matrix,xyz)
-    # image_end_time = time()
-    # print "  <-- Detecting inner voxels [",image_end_time-image_start_time,"s]"
-
-    # image_start_time = time()
-    # print "  --> Affecting image labels"
-    # voxel_tetrahedra = ((lambdas[...,0]>=0)&(lambdas[...,1]>=0)&(lambdas[...,2]>=0)&(np.sum(lambdas,axis=4)<=1))
-    # topomesh_img = np.array(np.max(voxel_tetrahedra*cell_tetrahedra_labels[np.newaxis,np.newaxis,np.newaxis],axis=3),np.uint16)
-    # image_end_time = time()
-    # print "  <-- Affecting image labels [",image_end_time-image_start_time,"s]"
-
-    image_start_time = time()
-    for t,tetra_label in enumerate(cell_tetrahedra_labels):
-        tetra_vertices = cell_tetrahedra[t]
-
-        coords = (np.mgrid[2.*scale*np.min(tetra_vertices[:,0]-1):2.*scale*np.max(tetra_vertices[:,0]+1),
-                           2.*scale*np.min(tetra_vertices[:,1]-1):2.*scale*np.max(tetra_vertices[:,1]+1),
-                           2.*scale*np.min(tetra_vertices[:,2]-1):2.*scale*np.max(tetra_vertices[:,2]+1)])/(2.*scale)
-        coords = np.transpose(coords,(1,2,3,0))
-
-        xyz = coords - tetra_vertices[0]
-        lambdas = np.einsum('...jk,...k->...j',cell_tetra_inv_matrix[t],xyz)
-
-        # voxel_tetrahedra = ((lambdas[...,0.]>=0)&(lambdas[...,1]>=0.)&(lambdas[...,2]>=0.)&(np.sum(lambdas,axis=3)<=1.))
-        # tetra_where = np.maximum(np.minimum(np.array(scale*(coords+offset),int),np.array(shape,int)-1),0)
-        # topomesh_img[tuple(np.transpose(tetra_where,axes=(3,0,1,2)))] = np.maximum(topomesh_img[tuple(np.transpose(tetra_where,axes=(3,0,1,2)))],np.array(voxel_tetrahedra*cell_tetrahedra_labels[t],np.uint16))
-
-        tetra_where = np.array(scale*(coords[np.where((lambdas[...,0]>=0) & (lambdas[...,1]>=0) & (lambdas[...,2]>=0) & (np.sum(lambdas,axis=3)<=1))]+offset),int)
-        tetra_where = tetra_where[np.where((tetra_where[...,0]>=0)&(tetra_where[...,1]>=0)&(tetra_where[...,2]>=0))]
-        tetra_where = tetra_where[np.where((tetra_where[...,0]<shape[0])&(tetra_where[...,1]<shape[1])&(tetra_where[...,2]<shape[2]))]
-        topomesh_img[tuple(np.transpose(tetra_where))] = tetra_label
-
-        if (t%10000 == 0)&(t>0):
-            image_end_time = time()
-            print "  --> Drawing Tetrahedron ",t,"[",(image_end_time-image_start_time)/10000.,"s]"
-            image_start_time = time()
-
-    end_time = time()
-    print "<-- Drawing topomesh image   [",end_time-start_time,"s]"
-
-    return topomesh_img
-
-def topomesh_line_rasterization(topomesh,shape):
-    """ """
-    start_time = time()
-    print "--> Rasterizing topomesh"
-
-    topomesh_img = np.ones(shape,np.uint16)
-
-    if not topomesh.has_wisp_property('barycenter',degree=3,is_computed=True):
-        compute_topomesh_property(topomesh,'barycenter',degree=3)
-    if not topomesh.has_wisp_property('borders',degree=3,is_computed=True):
-        compute_topomesh_property(topomesh,'borders',degree=3)
-    if not topomesh.has_wisp_property('vertices',degree=2,is_computed=True):
-        compute_topomesh_property(topomesh,'vertices',degree=2)
-
-    if not topomesh.has_wisp_property('label',degree=3,is_computed=False):
-        topomesh.add_wisp_property('label',degree=3)
-    if not topomesh.has_wisp_property('label',degree=3,is_computed=True):
-        topomesh.update_wisp_property('label',degree=3,values=np.array(list(topomesh.wisps(3)))+1)
-
-    for c in topomesh.wisps(3):
-        cell_start_time = time()
-        print "  --> Rasterizing cell",c
-
-        cell_img = np.zeros(shape,np.uint16)
-
-        cell_triangles = topomesh.wisp_property('borders',degree=3)[c]
-        cell_triangle_vertices = topomesh.wisp_property('vertices',degree=2).values(cell_triangles)
-        cell_faces = topomesh.wisp_property('barycenter',degree=0).values(cell_triangle_vertices)
-
-        coords = np.mgrid[np.min(cell_faces[:,0]-1):np.max(cell_faces[:,0]+1),
-                          np.min(cell_faces[:,1]-1):np.max(cell_faces[:,1]+1)]
-        coords = np.transpose(coords,(1,2,0))
-        coords = np.concatenate([coords,np.zeros_like(coords[...,0])[...,np.newaxis]-10],axis=2)
-        #coords = np.concatenate([coords,(np.min(cell_faces[:,2]-1))*np.ones_like(coords[...,0])[...,np.newaxis]],axis=2)
-
-        cell_face_edge1 = cell_faces[:,1] - cell_faces[:,0]
-        cell_face_edge2 = cell_faces[:,2] - cell_faces[:,0]
-        cell_rays_t     = coords[:,:,np.newaxis] - cell_faces[:,0][np.newaxis,np.newaxis,:]
-        cell_rays_d     = np.zeros_like(cell_rays_t)
-        cell_rays_d[...,2] = 1.
-
-        cell_face_p = np.cross(cell_rays_d,cell_face_edge2[np.newaxis,np.newaxis,:])
-        cell_face_q = np.cross(cell_rays_t,cell_face_edge1[np.newaxis,np.newaxis,:])
-
-        cell_face_norm = np.einsum('...ij,...ij->...i',cell_face_p,cell_face_edge1[np.newaxis,np.newaxis,:])
-        cell_face_distance = np.einsum('...ij,...ij->...i',cell_face_q,cell_face_edge2[np.newaxis,np.newaxis,:])
-        cell_face_projection_u = np.einsum('...ij,...ij->...i',cell_face_p,cell_rays_t)
-        cell_face_projection_v = np.einsum('...ij,...ij->...i',cell_face_q,cell_rays_d)
-        
-        cell_face_ray_intersection = np.concatenate([cell_face_distance[...,np.newaxis],cell_face_projection_u[...,np.newaxis],cell_face_projection_v[...,np.newaxis]],axis=3)/cell_face_norm[...,np.newaxis]        
-
-        for z in xrange(np.min(cell_faces[:,2]-1),np.max(cell_faces[:,2]+2)):
-            rays_intersections = np.where((cell_face_ray_intersection[...,0]>z)&(cell_face_ray_intersection[...,1]>0)&(cell_face_ray_intersection[...,1]<1)&(cell_face_ray_intersection[...,2]>0)&(cell_face_ray_intersection[...,2]<1))
-            layer = np.zeros_like(coords[:,:,0])
-
-        cell_end_time = time()
-        print "  <-- Rasterizing cell",c,"     [",end_time-start_time,"s]"
-
-
-    end_time = time()
-    print "<-- Rasterizing topomesh     [",end_time-start_time,"s]"
-
 def filter_topomesh_property(topomesh,property_name,degree,coef=0.5,normalize=False):
     assert topomesh.has_wisp_property(property_name,degree=degree,is_computed=True)
     if degree>1:
@@ -1635,156 +1485,6 @@ def topomesh_property_gaussian_filtering(topomesh,property_name,degree,adjacency
         filtered_properties = (vertex_gaussian[...,np.newaxis]*properties[:,np.newaxis]).sum(axis=0) / vertex_gaussian.sum(axis=0)[...,np.newaxis]
 
     topomesh.update_wisp_property(property_name,degree=degree,values=filtered_properties,keys=np.array(list(topomesh.wisps(degree))))
-
-
-def epidermis_topomesh(topomesh,cells=None):
-    import numpy as np
-    from copy import deepcopy
-    from openalea.container import PropertyTopomesh
-    from openalea.cellcomplex.property_topomesh.property_topomesh_analysis import compute_topomesh_property
-    
-    compute_topomesh_property(topomesh,'epidermis',3)
-    compute_topomesh_property(topomesh,'epidermis',1)
-    compute_topomesh_property(topomesh,'epidermis',0)
-    
-    if cells is None:
-        epidermis_topomesh = deepcopy(topomesh)
-    else:
-        faces = np.array(np.unique(np.concatenate([np.array(list(topomesh.borders(3,c))) for c in cells])),int)
-        edges = np.array(np.unique(np.concatenate([np.array(list(topomesh.borders(2,t))) for t in faces])),int)
-        vertices = np.array(np.unique(np.concatenate([np.array(list(topomesh.borders(1,e))) for e in edges])),int)
-        epidermis_topomesh = PropertyTopomesh(3)
-        vertices_to_pids = {}
-        for v in vertices:
-            pid = epidermis_topomesh.add_wisp(0,v)
-            vertices_to_pids[v] = pid
-        edges_to_eids = {}
-        for e in edges:
-            eid = epidermis_topomesh.add_wisp(1,e)
-            edges_to_eids[e] = eid
-            for v in topomesh.borders(1,e):
-                epidermis_topomesh.link(1,eid,vertices_to_pids[v])
-        faces_to_fids = {}
-        for f in faces:
-            fid = epidermis_topomesh.add_wisp(2,f)
-            faces_to_fids[f] = fid
-            for e in topomesh.borders(2,f):
-                epidermis_topomesh.link(2,fid,edges_to_eids[e])
-        for c in cells:
-            cid = epidermis_topomesh.add_wisp(3,c)
-            for f in topomesh.borders(3,c):
-                epidermis_topomesh.link(3,cid,faces_to_fids[f])
-    
-    vertices_to_remove = []
-    for v in epidermis_topomesh.wisps(0):
-        if not topomesh.wisp_property('epidermis',0)[v]:
-            vertices_to_remove.append(v)
-    for v in vertices_to_remove:
-        epidermis_topomesh.remove_wisp(0,v)
-    edges_to_remove = []
-    for e in epidermis_topomesh.wisps(1):
-        if not topomesh.wisp_property('epidermis',1)[e]:
-            edges_to_remove.append(e)
-    for e in edges_to_remove:
-        epidermis_topomesh.remove_wisp(1,e)
-    faces_to_remove = []
-    for f in epidermis_topomesh.wisps(2):
-        if not topomesh.wisp_property('epidermis',2)[f]:
-            faces_to_remove.append(f)
-    for f in faces_to_remove:
-        epidermis_topomesh.remove_wisp(2,f)
-    cells_to_remove = []
-    for c in epidermis_topomesh.wisps(3):
-        if not topomesh.wisp_property('epidermis',3)[c]:
-            cells_to_remove.append(c)
-    for c in cells_to_remove:
-        epidermis_topomesh.remove_wisp(3,c)
-    epidermis_topomesh.update_wisp_property('barycenter',0,topomesh.wisp_property('barycenter',0).values(list(epidermis_topomesh.wisps(0))),keys=np.array(list(epidermis_topomesh.wisps(0))))
-    return epidermis_topomesh
-
-def clean_topomesh(input_topomesh):
-    from copy import deepcopy
-
-    topomesh = deepcopy(input_topomesh)
-
-    cells_to_remove = [w for w in topomesh.wisps(3) if topomesh.nb_borders(3,w)==0]
-    for w in cells_to_remove:
-        topomesh.remove_wisp(3,w)
-
-    triangles_to_remove = [w for w in topomesh.wisps(2) if topomesh.nb_regions(2,w)==0]
-    for w in triangles_to_remove:
-        topomesh.remove_wisp(2,w)
-
-    edges_to_remove = [w for w in topomesh.wisps(1) if topomesh.nb_regions(1,w)==0]
-    for w in edges_to_remove:
-        topomesh.remove_wisp(1,w)
-        
-    vertices_to_remove = [w for w in topomesh.wisps(0) if topomesh.nb_regions(0,w)==0]
-    for w in vertices_to_remove:
-        topomesh.remove_wisp(0,w)
-
-    return topomesh
-    
-
-def cell_topomesh(input_topomesh, cells=None):
-    from copy import deepcopy
-    start_time = time()
-
-    #topomesh = PropertyTopomesh(topomesh=input_topomesh)
-    topomesh = PropertyTopomesh(3)
-
-    if cells is None:
-        cells = set(topomesh.wisps(3))
-    else:
-        cells = set(cells)
-
-    faces = set()
-    for c in cells:
-        topomesh._borders[3][c] = input_topomesh._borders[3][c]
-        faces = faces.union(set(topomesh._borders[3][c]))
-
-    edges = set()
-    for f in faces:
-        topomesh._borders[2][f] = input_topomesh._borders[2][f]
-        topomesh._regions[2][f] = np.array(list(set(input_topomesh._regions[2][f]).intersection(cells)))
-        edges = edges.union(set(topomesh._borders[2][f]))
-
-    vertices = set()
-    for e in edges:
-        topomesh._borders[1][e] = input_topomesh._borders[1][e]
-        topomesh._regions[1][e] = np.array(list(set(input_topomesh._regions[1][e]).intersection(faces)))
-        vertices = vertices.union(set(topomesh._borders[1][e]))
-
-    for v in vertices:
-        topomesh._regions[0][v] = np.array(list(set(input_topomesh._regions[0][v]).intersection(edges)))
-
-    topomesh.update_wisp_property('barycenter',0,array_dict(input_topomesh.wisp_property('barycenter',0).values(list(vertices)),list(vertices)))
-
-
-    # cells_to_remove = [c for c in topomesh.wisps(3) if not c in cells]
-    # cells_to_remove = list(set(topomesh.wisps(3)).difference(set(cells)))
-
-
-    # for c in cells_to_remove:
-    #     topomesh.remove_wisp(3,c)
-
-    # faces_to_remove = [w for w in topomesh.wisps(2) if topomesh.nb_regions(2,w)==0]
-    # for w in faces_to_remove:
-    #     topomesh.remove_wisp(2,w)
-
-    # edges_to_remove = [w for w in topomesh.wisps(1) if topomesh.nb_regions(1,w)==0]
-    # for w in edges_to_remove:
-    #     topomesh.remove_wisp(1,w)
-        
-    # vertices_to_remove = [w for w in topomesh.wisps(0) if topomesh.nb_regions(0,w)==0]
-    # for w in vertices_to_remove:
-    #     topomesh.remove_wisp(0,w)
-
-    end_time = time()
-    #end_time = time()
-    print "<-- Extracting cell topomesh     [",end_time-start_time,"s]"
-
-    return topomesh
 
     
 

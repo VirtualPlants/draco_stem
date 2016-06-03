@@ -20,7 +20,7 @@
 
 __revision__ = ""
 
-import weakref
+# import weakref
 from openalea.vpltk.qt import QtGui, QtCore
 from openalea.core.observer import AbstractListener
 from openalea.core.control import Control

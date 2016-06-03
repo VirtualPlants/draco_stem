@@ -200,6 +200,7 @@ def property_topomesh_vertices_deformation(topomesh,iterations=1,omega_forces=di
 
         print topomesh.nb_wisps(0)," Vertices, ",topomesh.nb_wisps(2)," Triangles, ",topomesh.nb_wisps(3)," Cells"
 
+
 def property_topomesh_cell_vertex_force(topomesh,gradient_derivatives,resolution):
     """
     Compute for each vertex of the topomesh the force guiding its displacement towards a cell vertex
@@ -282,6 +283,7 @@ def property_topomesh_triangle_regularization_force(topomesh):
 
     return triangle_force
 
+
 def property_topomesh_area_smoothing_force(topomesh,target_areas=None):
 
     compute_topomesh_property(topomesh,'vertices',degree=2)
@@ -358,6 +360,7 @@ def property_topomesh_laplacian_smoothing_force(topomesh,cellwise_smoothing=Fals
 
     return laplacian_force
 
+
 def property_topomesh_cotangent_laplacian_smoothing_force(topomesh):
     
     compute_topomesh_property(topomesh,'vertices',degree=2)
@@ -413,6 +416,7 @@ def property_topomesh_cotangent_laplacian_smoothing_force(topomesh):
 
     return laplacian_force
 
+
 def property_topomesh_gaussian_smoothing_force(topomesh,gaussian_sigma=10.0):
 
     compute_topomesh_property(topomesh,'vertices',degree=1)
@@ -432,6 +436,7 @@ def property_topomesh_gaussian_smoothing_force(topomesh,gaussian_sigma=10.0):
     gaussian_force = gaussian_force/vertices_weights[:,np.newaxis]
 
     return gaussian_force
+
 
 def property_topomesh_taubin_smoothing_force(topomesh,gaussian_sigma=10.0,positive_factor=0.33,negative_factor=-0.34,cellwise_smoothing=True):
 
@@ -475,6 +480,7 @@ def property_topomesh_taubin_smoothing_force(topomesh,gaussian_sigma=10.0,positi
     taubin_force = taubin_positive_force + taubin_negative_force
 
     return taubin_force
+
 
 def property_topomesh_mean_curvature_smoothing_force(topomesh):
     """todo"""
@@ -734,6 +740,7 @@ def property_topomesh_epidermis_convexity_force(topomesh):
 
     return epidermis_convexity_force
 
+
 def property_topomesh_epidermis_planarization_force(topomesh):
     if not topomesh.has_wisp_property('epidermis',degree=2,is_computed=True):
         compute_topomesh_property(topomesh,'epidermis',degree=2)
@@ -861,6 +868,7 @@ def property_topomesh_cell_interface_planarization_force(topomesh):
     planarization_force[np.isnan(planarization_force)] = 0.
 
     return planarization_force
+
 
 def topomesh_remove_vertex(topomesh,pid,kept_fid=None,triangulate=True):
 
@@ -1093,6 +1101,7 @@ def topomesh_flip_edge(topomesh,eid):
         print "Impossible to flip edge : wrong configuration ( ",len(list(topomesh.regions(1,eid)))," faces)"
         return False
 
+
 def topomesh_split_edge(topomesh,eid):
     pid_to_keep, pid_to_unlink = topomesh.borders(1,eid)
 
@@ -1139,6 +1148,7 @@ def topomesh_split_edge(topomesh,eid):
     #     raw_input()
 
     return True
+
 
 def topomesh_triangle_split(input_topomesh):
     from copy import deepcopy
@@ -1269,6 +1279,7 @@ def topomesh_remove_interface_vertex(topomesh, pid):
         print "Impossible to remove vertex : wrong face definition"
         return False
 
+
 def topomesh_remove_interface_edge(topomesh,eid):
     edge_fids = list(topomesh.regions(1,eid))
     fid_to_keep = np.min(edge_fids)
@@ -1297,6 +1308,7 @@ def topomesh_remove_interface_edge(topomesh,eid):
     topomesh.remove_wisp(1,eid)
 
     return True
+
 
 def topomesh_remove_boundary_vertex(topomesh, pid):
     try:
@@ -1333,6 +1345,7 @@ def topomesh_remove_boundary_vertex(topomesh, pid):
     except AssertionError:
         print "Impossible to remove vertex : wrong edge definition"
         return False
+
 
 def property_topomesh_edge_flip_optimization(topomesh,omega_energies=dict([('regularization',0.15),('neighborhood',0.65)]),simulated_annealing=True,display=False,**kwargs):
     from openalea.cellcomplex.property_topomesh.utils.geometry_tools import triangle_geometric_features

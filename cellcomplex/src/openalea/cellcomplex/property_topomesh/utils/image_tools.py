@@ -38,7 +38,7 @@ from openalea.container import array_dict
 from openalea.image.spatial_image import SpatialImage
 
 from openalea.mesh import PropertyTopomesh, TriangularMesh
-from openalea.mesh.property_topomesh_analysis import cell_topomesh
+from openalea.mesh.property_topomesh_extraction import cell_topomesh
 
 from time import time
 
