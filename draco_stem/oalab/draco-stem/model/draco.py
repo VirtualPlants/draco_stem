@@ -20,11 +20,9 @@ from openalea.oalab.colormap.colormap_def import load_colormaps
 world.clear()
 
 import vplants.meshing_data
-filename = "p194-t3_imgSeg_SegExp_CellShapeCorr"
-
-
+#filename = "p194-t3_imgSeg_SegExp_CellShapeCorr"
 #filename = "rs01_wt_t00_seg"
-#filename = "segmentation"
+filename = "segmentation"
 #filename = "olli01_lti6b_150421_sam01_t000_seg_hmin_2"
 dirname = shared_data(vplants.meshing_data)
 meshing_dirname =  dirname.parent.parent
