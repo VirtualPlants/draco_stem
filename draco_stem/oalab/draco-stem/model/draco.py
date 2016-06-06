@@ -5,7 +5,7 @@ from openalea.deploy.shared_data import shared_data
 
 from openalea.mesh.property_topomesh_io import save_ply_property_topomesh, read_ply_property_topomesh
 
-from openalea.image.serial.all import imread
+from openalea.image.serial.all import imread, imsave
 from openalea.image.spatial_image import SpatialImage
 
 import openalea.draco_stem.draco.dual_reconstruction
@@ -17,13 +17,19 @@ from openalea.draco_stem.draco.draco import DracoMesh
 
 from openalea.oalab.colormap.colormap_def import load_colormaps
 
+from copy import deepcopy
+
+
 world.clear()
 
 import vplants.meshing_data
 #filename = "p194-t3_imgSeg_SegExp_CellShapeCorr"
 #filename = "rs01_wt_t00_seg"
-filename = "segmentation"
+#filename = "segmentation"
 #filename = "olli01_lti6b_150421_sam01_t000_seg_hmin_2"
+filename = "sphere_cells"
+
+
 dirname = shared_data(vplants.meshing_data)
 meshing_dirname =  dirname.parent.parent
 
@@ -33,11 +39,17 @@ if not os.path.exists(dirname+"/output_meshes/"+filename):
 
 inputfile = dirname+"/segmented_images/"+filename+".inr.gz"
 
+img = sphere_tissue_image(size=200, n_points=40)
+
+imsave(inputfile,img)
+
 #inputfile = "/Users/gcerutti/Developpement/openalea/openalea_marsalt/example/time_0_cut_seg_median.inr" 
 
 img = imread(inputfile)
 #img[img==0]=1
 #img = SpatialImage(np.concatenate([img[:,:,35:],np.ones((img.shape[0],img.shape[1],5))],axis=2).astype(np.uint16),resolution=img.resolution)
+
+
 
 cell_vertex_file = dirname+"/output_meshes/"+filename+"/image_cell_vertex.dict"
 triangulation_file = dirname+"/output_meshes/"+filename+"/"+filename+"_draco_adjacency_complex.pkl"
@@ -72,11 +84,11 @@ from openalea.container import array_dict
 # img = SpatialImage(img,resolution=(1,1,1))
 
 
-world.add(img,"segmented_image",colormap='glasbey',alphamap='constant',bg_id=1)
+world.add(img,"segmented_image",colormap='glasbey',alphamap='constant',bg_id=1,alpha=0.02)
 
-draco = DracoMesh(image=img, image_cell_vertex_file=cell_vertex_file, triangulation_file=triangulation_file)
+#draco = DracoMesh(image=img, image_cell_vertex_file=cell_vertex_file, triangulation_file=triangulation_file)
 #draco = DracoMesh(image_file=inputfile, image_cell_vertex_file=cell_vertex_file)
-#draco = DracoMesh(image=img)
+draco = DracoMesh(image=img)
 
 #world.add(draco.segmented_image-(draco.segmented_image==1),'segmented_image',colormap='glasbey',alphamap='constant',bg_id=0)
 world.add(draco.point_topomesh,'image_cells')
@@ -84,41 +96,52 @@ world['image_cells_vertices'].set_attribute('point_radius',img.max())
 #world.add(draco.layer_edge_topomesh['L1'],'L1_adjacency')
 #world.add(draco.image_cell_vertex_topomesh,'image_cell_vertex')
 
-# cube_points = {}
-# cube_points[0] = np.array([0,0,0])*size
-# cube_points[1] = np.array([1,0,0])*size
-# cube_points[2] = np.array([0,1,0])*size
-# cube_points[3] = np.array([0,0,1])*size
-# cube_points[4] = np.array([1,1,0])*size
-# cube_points[5] = np.array([0,1,1])*size
-# cube_points[6] = np.array([1,0,1])*size
-# cube_points[7] = np.array([1,1,1])*size
+draco.delaunay_adjacency_complex(surface_cleaning_criteria = [])
+#draco.delaunay_adjacency_complex(surface_cleaning_criteria = ['surface','sliver','distance'])
 
-# cube_edges = []
-# cube_edges += [[0,1]]
-# cube_edges += [[0,2]]
-# cube_edges += [[0,3]]
-# cube_edges += [[1,4]]
-# cube_edges += [[1,6]]
-# cube_edges += [[2,4]]
-# cube_edges += [[2,5]]
-# cube_edges += [[3,5]]
-# cube_edges += [[3,6]]
-# cube_edges += [[4,7]]
-# cube_edges += [[5,7]]
-# cube_edges += [[6,7]]
-
-# from openalea.mesh.property_topomesh_creation import edge_topomesh
-# world.add(edge_topomesh(cube_edges,cube_points),"box")
-
-raw_input()
+#draco.adjacency_complex_optimization(n_iterations=2)
 
 from copy import deepcopy
+triangulation_topomesh = deepcopy(draco.triangulation_topomesh)
+world.add(triangulation_topomesh,'cell_adjacency_complex')
+world['cell_adjacency_complex_cells'].set_attribute('polydata_colormap',load_colormaps()['grey'])
+world['cell_adjacency_complex_cells'].set_attribute('intensity_range',(-1,0))
+world['cell_adjacency_complex'].set_attribute('coef_3',0.95)#
+#world['cell_adjacency_complex_cells'].set_attribute('x_slice',(50,100))
+world['cell_adjacency_complex_cells'].set_attribute('display_colorbar',False)
+
+triangular = ['star','split']
+image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3)
+#image_dual_topomesh = draco.draco_topomesh(reconstruction_triangulation = triangular)
+
+world.add(image_dual_topomesh ,'dual_reconstuction')
+
+from openalea.mesh.property_topomesh_extraction import epidermis_topomesh
+
+L1_topomesh = epidermis_topomesh(image_dual_topomesh)
+
+world.add(L1_topomesh ,'dual_reconstuction')
 
 
-#draco.delaunay_adjacency_complex(surface_cleaning_criteria = [])
+size = 200.
+center = np.array([size/2,size/2,size/2],float)*np.array(img.resolution)
+    
+positions = L1_topomesh.wisp_property('barycenter',0)
+for p in L1_topomesh.wisps(0):
+    positions[p] = center + (size/3.)*np.array(img.resolution)*(positions[p]-center)/np.linalg.norm(positions[p]-center)
+    
+L1_topomesh.update_wisp_property('barycenter',0,positions)
+world.add(L1_topomesh ,'dual_reconstuction')
 
-draco.delaunay_adjacency_complex(surface_cleaning_criteria = ['surface','sliver','distance'])
+
+triangular_string = ""
+for t in triangular:
+    triangular_string += t+"_"
+topomesh_filename = dirname+"/output_meshes/"+filename+"/"+filename+"_voronoi_L1_"+triangular_string+"topomesh.ply"
+
+save_ply_property_topomesh(L1_topomesh,topomesh_filename,color_faces=True)
+
+
 
 triangulation_topomesh = deepcopy(draco.triangulation_topomesh)
 
@@ -215,7 +238,7 @@ world['L1_L2_adjacency_complex_vertices'].set_attribute('x_slice',(30,70))
 world['L1_L2_adjacency_complex_vertices'].set_attribute('display_colorbar',False)
 
 draco.triangulation_topomesh = L1_L2_topomesh
-triangular= ['star','remeshed','projected','exact','flat']
+triangular= ['star','remeshed','projected','exact']
 image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3)
 #image_dual_topomesh = draco.draco_topomesh(reconstruction_triangulation = triangular)
 world.add(image_dual_topomesh ,'L1_L2_dual_reconstuction')
@@ -226,14 +249,14 @@ triangulation_topomesh = deepcopy(draco.triangulation_topomesh)
 world.add(triangulation_topomesh,'cell_adjacency_complex')
 world['cell_adjacency_complex_cells'].set_attribute('polydata_colormap',load_colormaps()['grey'])
 world['cell_adjacency_complex_cells'].set_attribute('intensity_range',(-1,0))
-world['cell_adjacency_complex'].set_attribute('coef_3',0.95)
-world['cell_adjacency_complex_cells'].set_attribute('x_slice',(50,100))
+world['cell_adjacency_complex'].set_attribute('coef_3',0.95)#
+#world['cell_adjacency_complex_cells'].set_attribute('x_slice',(50,100))
 world['cell_adjacency_complex_cells'].set_attribute('display_colorbar',False)
-world['cell_adjacency_complex_cells'].set_attribute('preserve_faces',True)
-world['cell_adjacency_complex'].set_attribute('display_0',True)
-world['cell_adjacency_complex_vertices'].set_attribute('point_radius',draco.triangulation_topomesh.nb_wisps(0))
-world['cell_adjacency_complex_vertices'].set_attribute('x_slice',(50,100))
-world['cell_adjacency_complex_vertices'].set_attribute('display_colorbar',False)
+#world['cell_adjacency_complex_cells'].set_attribute('preserve_faces',True)
+#world['cell_adjacency_complex'].set_attribute('display_0',True)
+#world['cell_adjacency_complex_vertices'].set_attribute('point_radius',draco.triangulation_topomesh.nb_wisps(0))
+#world['cell_adjacency_complex_vertices'].set_attribute('x_slice',(50,100))
+#world['cell_adjacency_complex_vertices'].set_attribute('display_colorbar',False)
 
 #delaunay_topomesh = deepcopy(draco.delaunay_topomesh)
 world.add(delaunay_topomesh,'delaunay_complex')
@@ -244,7 +267,7 @@ world['delaunay_complex_cells'].set_attribute('x_slice',(50,100))
 world['delaunay_complex_cells'].set_attribute('display_colorbar',False)
 world['delaunay_complex_cells'].set_attribute('preserve_faces',True)
 
-#cleaned_delaunay_topomesh = deepcopy(draco.delaunay_topomesh)
+cleaned_delaunay_topomesh = deepcopy(draco.delaunay_topomesh)
 world.add(cleaned_delaunay_topomesh,'cleaned_delaunay_complex')
 world['cleaned_delaunay_complex_cells'].set_attribute('polydata_colormap',load_colormaps()['grey'])
 world['cleaned_delaunay_complex_cells'].set_attribute('intensity_range',(-1,0))
@@ -267,7 +290,7 @@ save_property_topomesh(draco.triangulation_topomesh,triangulation_file,original_
 draco.triangulation_topomesh = triangulation_topomesh
 triangular= ['star','flat']
 
-triangular = ['star']
+triangular = ['star','remeshed','projected','exact','flat']
 image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3)
 #image_dual_topomesh = draco.draco_topomesh(reconstruction_triangulation = triangular)
 

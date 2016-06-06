@@ -31,7 +31,7 @@ import os
 import sys
 import pickle
 
-def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,normal_method="density",object_positions=None,object_radius=10.):
+def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,normal_method="density",object_positions=None,object_radius=10.,verbose=False):
     """Compute a property of a PropertyTopomesh
 
     The function compute and fills a property of a PropertyTopomesh passed as argument. The given
@@ -64,7 +64,8 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
         positions = topomesh.wisp_property('barycenter',degree=0)
 
     start_time = time()
-    print "--> Computing ",property_name," property (",degree,")"
+    if verbose:
+        print "--> Computing ",property_name," property (",degree,")"
 
     if property_name == 'barycenter':
         if not isinstance(positions,array_dict):
@@ -231,7 +232,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
             for c,cid in enumerate(topomesh.wisps(3)):
 
                 cell_fids = np.array(list(topomesh.borders(3,cid)))
-                print cell_fids
+                # print cell_fids
 
                 cell_fid_normals = topomesh.wisp_property('normal',2).values(cell_fids)
                 cell_fid_barycenters = topomesh.wisp_property('barycenter',2).values(cell_fids)
@@ -266,7 +267,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
 
                 # print oriented_cell_fid_orientations
                 # print next_fid_queue
-                print len(oriented_cell_fid_orientations.keys())," / ",len(cell_fids)," [",len(next_fid_queue),"]"
+                # print len(oriented_cell_fid_orientations.keys())," / ",len(cell_fids)," [",len(next_fid_queue),"]"
                 # raw_input()
 
                 while len(oriented_cell_fid_orientations.keys()) < len(cell_fids):
@@ -280,10 +281,10 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
                         current_fid_orientation = oriented_cell_fid_orientations[current_fid]
                         next_face_eid_orientations = array_dict(*topomesh.wisp_property('oriented_borders',2)[next_fid][::-1])
 
-                        print list(topomesh.borders(2,current_fid))
-                        print current_face_eid_orientations
-                        print list(topomesh.borders(2,next_fid))
-                        print next_face_eid_orientations
+                        # print list(topomesh.borders(2,current_fid))
+                        # print current_face_eid_orientations
+                        # print list(topomesh.borders(2,next_fid))
+                        # print next_face_eid_orientations
                         
                         next_fid_orientation = - current_face_eid_orientations[transition_eid]*current_fid_orientation*next_face_eid_orientations[transition_eid]
                         oriented_cell_fid_orientations[next_fid] = next_fid_orientation
@@ -303,7 +304,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
 
                         # print oriented_cell_fid_orientations
                         # next_fid_queue
-                        print "Cell ",cid," : ", len(oriented_cell_fid_orientations.keys())," / ",len(cell_fids)," [",len(next_fid_queue),"]"
+                        # print "Cell ",cid," : ", len(oriented_cell_fid_orientations.keys())," / ",len(cell_fids)," [",len(next_fid_queue),"]"
                         # raw_input()
 
                     if len(oriented_cell_fid_orientations.keys()) < len(cell_fids):
@@ -325,7 +326,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
                         
                         # print oriented_cell_fid_orientations
                         # print next_fid_queue
-                        print len(oriented_cell_fid_orientations.keys())," / ",len(cell_fids)," [",len(next_fid_queue),"]"
+                        # print len(oriented_cell_fid_orientations.keys())," / ",len(cell_fids)," [",len(next_fid_queue),"]"
                         # raw_input()
 
                 # oriented_cell_fids = [cell_fids[0]]
@@ -774,7 +775,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
                 compute_topomesh_property(topomesh,'epidermis',degree=2)
 
             epidermis_triangles = np.array(list(topomesh.wisps(2)))[topomesh.wisp_property('epidermis',2).values(list(topomesh.wisps(2)))]
-            print epidermis_triangles
+            # print epidermis_triangles
 
             #triangle_vertices = topomesh.wisp_property('vertices',degree=2).values(list(topomesh.wisps(2)))
             triangle_vertices = topomesh.wisp_property('vertices',degree=2).values(epidermis_triangles)
@@ -829,12 +830,12 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
         triangle_sinuses[:,1] = np.sqrt(1.0 - np.power((triangle_edge_lengths[:,0]**2+triangle_edge_lengths[:,1]**2-triangle_edge_lengths[:,2]**2)/(2.0*triangle_edge_lengths[:,0]*triangle_edge_lengths[:,1]),2.0))
         triangle_sinuses[:,2] = np.sqrt(1.0 - np.power((triangle_edge_lengths[:,2]**2+triangle_edge_lengths[:,0]**2-triangle_edge_lengths[:,1]**2)/(2.0*triangle_edge_lengths[:,2]*triangle_edge_lengths[:,0]),2.0))
 
-        print triangle_sinuses.shape
-        print triangle_vertices.shape
+        # print triangle_sinuses.shape
+        # print triangle_vertices.shape
 
         triangle_centers = ((topomesh.wisp_property('barycenter',degree=0).values(triangle_vertices)/triangle_sinuses[...,np.newaxis]).sum(axis=1))/((1./triangle_sinuses).sum(axis=1)[...,np.newaxis])
         # print triangle_centers
-        print triangle_centers.shape
+        # print triangle_centers.shape
         topomesh.update_wisp_property('incircle center',degree=degree,values=triangle_centers,keys=np.array(list(topomesh.wisps(degree))))
 
     if property_name == 'volume':
@@ -1235,7 +1236,8 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
         topomesh.update_interface_property('interface',degree=degree,values=np.linalg.norm(neighbour_vectors,axis=1),keys=np.array(list(topomesh.interfaces(degree))))
 
     end_time = time()
-    print "<-- Computing",property_name,"property (",degree,") [",end_time-start_time,"s]"
+    if verbose:
+        print "<-- Computing",property_name,"property (",degree,") [",end_time-start_time,"s]"
 
 
 def compute_topomesh_triangle_properties(topomesh,positions=None):

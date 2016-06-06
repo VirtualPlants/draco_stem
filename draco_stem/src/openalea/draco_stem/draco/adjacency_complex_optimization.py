@@ -941,6 +941,7 @@ def tetrahedrization_topomesh_topological_optimization(input_triangulation_topom
                 plane_vectors[0] = np.cross(normal_vector,np.array([1,0,0]))
                 plane_vectors[1] = np.cross(normal_vector,plane_vectors[0])
                 projected_points = np.transpose([np.einsum('ij,ij->i',vectors,plane_vectors[0][np.newaxis,:]),np.einsum('ij,ij->i',vectors,plane_vectors[1][np.newaxis,:]),np.zeros_like(points[:,2])])
+                # print points,' -> ',projected_points
                 return projected_points
                 
             projected_edge_neighbors = np.array(map(project,edge_exterior_positions(positions,exterior_positions,edge_neighbor_cells),edge_middles,edge_vectors))
@@ -948,7 +949,7 @@ def tetrahedrization_topomesh_topological_optimization(input_triangulation_topom
             def array_delaunay(points,indices):
                 from openalea.mesh.utils.delaunay_tools import delaunay_triangulation
                 #from openalea.plantgl.algo import delaunay_triangulation
-                import numpy as np
+                # import numpy as np
                 if len(indices)>3:
                     triangulation = delaunay_triangulation(points)
                     if len(triangulation)>0:
@@ -971,186 +972,188 @@ def tetrahedrization_topomesh_topological_optimization(input_triangulation_topom
             flippable_edges = (edge_flip_tetra_volume_difference<0.001)
             
             edge_energy_variation = np.zeros(triangulation_topomesh.nb_wisps(1),float)
+
+            if len(flippable_edges) > 0:
             
-            if omega_energies.has_key('image'):
-                matching_tetras = vq(np.concatenate(edge_tetras[flippable_edges]),np.sort(image_cell_vertex.keys()))[1]==0
-                matching_tetra_edges = np.concatenate([np.ones(tetras.shape[0])*e for e,tetras in zip(triangulation_topomesh.wisp_property('cells',1).keys()[flippable_edges],edge_tetras[flippable_edges])])
-                
-                matching_flipped_tetras = vq(np.concatenate(edge_flipped_tetras[flippable_edges]),np.sort(image_cell_vertex.keys()))[1] == 0
-                matching_flipped_tetra_edges = np.concatenate([np.ones(tetras.shape[0])*e for e,tetras in zip(triangulation_topomesh.wisp_property('cells',1).keys()[flippable_edges],edge_flipped_tetras[flippable_edges])])
-                
-                edge_matching_tetras = nd.sum(matching_tetras,matching_tetra_edges,index=triangulation_topomesh.wisp_property('cells',1).keys())
-                edge_matching_flipped_tetras = nd.sum(matching_flipped_tetras,matching_flipped_tetra_edges,index=triangulation_topomesh.wisp_property('cells',1).keys())
-                edge_image_energy_variation = edge_matching_tetras - edge_matching_flipped_tetras
-                edge_energy_variation += omega_energies['image']*edge_image_energy_variation
-            
-            if omega_energies.has_key('adjacency'):
-                cell_adjacencies = np.array([len(list(triangulation_topomesh.region_neighbors(0,c))) for c in triangulation_topomesh.wisps(0)])
-                cell_exterior_adjacencies = np.array([1 in triangulation_topomesh.region_neighbors(0,c) for c in triangulation_topomesh.wisps(0)])
-                cell_adjacencies = array_dict(cell_adjacencies-cell_exterior_adjacencies,list(triangulation_topomesh.wisps(0)))
-                edge_adjacency_energy_variation = np.zeros(triangulation_topomesh.nb_wisps(1),float)
-                flip_exterior = edge_cells.min(axis=1)==1
-                
-                edge_adjacency_energy_variation[flip_exterior] -= np.power(cell_adjacencies.values(edge_cells.max(axis=1)[flip_exterior])-epidermis_neighborhood,2.0)
-                edge_adjacency_energy_variation[flip_exterior] += np.power(cell_adjacencies.values(edge_cells.max(axis=1)[flip_exterior])-inner_neighborhood,2.0)
-                edge_adjacency_energy_variation[True - flip_exterior] -= np.power(cell_adjacencies.values(edge_cells[True - flip_exterior])-inner_neighborhood,2.0).sum(axis=1)
-                edge_adjacency_energy_variation[True - flip_exterior] += np.power(cell_adjacencies.values(edge_cells[True - flip_exterior])-1-inner_neighborhood,2.0).sum(axis=1)
-                
-                edge_tetra_edges = np.array([array_unique(np.sort(np.concatenate(t[:,tetra_triangle_edge_list]))) for t in edge_tetras])
-                edge_flipped_tetra_edges = np.array([array_unique(np.sort(np.concatenate(t[:,tetra_triangle_edge_list]))) for t in edge_flipped_tetras])
-                edge_created_edges = np.array([f_e[vq(f_e,e)[1]>0] for f_e,e in zip(edge_flipped_tetra_edges,edge_tetra_edges)])
-                edge_created_edge_edges = np.concatenate([e*np.ones(len(edge_created_edges[e])) for e in xrange(triangulation_topomesh.nb_wisps(1))])
-                edge_created_edges = np.concatenate(edge_created_edges)
-                
-                created_edge_adjacency_energy_variation = np.zeros(len(edge_created_edges),float)
-                created_exterior = edge_created_edges.min(axis=1)==1
-                created_edge_adjacency_energy_variation[created_exterior] -= np.power(cell_adjacencies.values(edge_created_edges.max(axis=1)[created_exterior])-inner_neighborhood,2.0)
-                created_edge_adjacency_energy_variation[created_exterior] += np.power(cell_adjacencies.values(edge_created_edges.max(axis=1)[created_exterior])-epidermis_neighborhood,2.0)
-                created_edge_adjacency_energy_variation[True - created_exterior] -= np.power(cell_adjacencies.values(edge_created_edges[True - created_exterior])-inner_neighborhood,2.0).sum(axis=1)
-                created_edge_adjacency_energy_variation[True - created_exterior] += np.power(cell_adjacencies.values(edge_created_edges[True - created_exterior])+1-inner_neighborhood,2.0).sum(axis=1)
-                
-                edge_creation_adjacency_energy_variation = nd.sum(created_edge_adjacency_energy_variation,edge_created_edge_edges,index=np.arange(triangulation_topomesh.nb_wisps(1)))
-                edge_adjacency_energy_variation += edge_creation_adjacency_energy_variation
-                
-                edge_energy_variation += omega_energies['adjacency']*edge_adjacency_energy_variation
-            
-            if omega_energies.has_key('geometry'):
-            
-                edge_tetra_max_distance = np.array([tetra_geometric_features(edge_tetras[e],edge_positions[e],features=['max_distance']) for e in xrange(len(edge_tetras))])
-                edge_flipped_tetra_max_distance = np.array([tetra_geometric_features(edge_flipped_tetras[e],edge_positions[e],features=['max_distance']) for e in xrange(len(edge_tetras))])
-                
-                edge_tetra_eccentricity = np.array([tetra_geometric_features(edge_tetras[e],edge_positions[e],features=['eccentricity']) for e in xrange(len(edge_tetras))])
-                edge_flipped_tetra_eccentricity = np.array([tetra_geometric_features(edge_flipped_tetras[e],edge_positions[e],features=['eccentricity']) for e in xrange(len(edge_tetras))])
-                
-                edge_geometry_energy_variation = -np.array(map(np.mean,edge_tetra_max_distance)) + np.array(map(np.mean,edge_flipped_tetra_max_distance))
-                edge_geometry_energy_variation += 10.*(-np.array(map(np.max,edge_tetra_eccentricity)) + np.array(map(np.max,edge_flipped_tetra_eccentricity)))
-                edge_energy_variation += omega_energies['geometry']*edge_geometry_energy_variation
-            
-            
-            edge_energy_variation[True-flippable_edges] = 1000.
-            sorted_energy_edges = np.argsort(edge_energy_variation)
-            
-            end_time = time()
-            print "--> Computing edge flip energy variations [",end_time-start_time,"s]"
-            
-            flip_start_time = time()
-            flipped_edges = []
-            suboptimal_flipped_edges = []
-            modified_edges = []
-            
-            for edge_to_flip in sorted_energy_edges:
-                start_time = time()
-                edge_id = triangulation_topomesh.wisp_property('cells',1).keys()[edge_to_flip]
-                energy_variation = edge_energy_variation[edge_to_flip]
-                
-                cell_flip_probability = np.exp(-energy_variation/simulated_annealing_temperature)
-                if edge_id in modified_edges or energy_variation >= 1000:
-                    cell_flip_probability = 0.
-                else:
-                    tetras = edge_tetras[edge_to_flip]
-                    flipped_tetras = edge_flipped_tetras[edge_to_flip]
-                    cells = edge_cells[edge_to_flip]
-                    neighbor_cells = edge_neighbor_cells[edge_to_flip]
+                if omega_energies.has_key('image'):
+                    matching_tetras = vq(np.concatenate(edge_tetras[flippable_edges]),np.sort(image_cell_vertex.keys()))[1]==0
+                    matching_tetra_edges = np.concatenate([np.ones(tetras.shape[0])*e for e,tetras in zip(triangulation_topomesh.wisp_property('cells',1).keys()[flippable_edges],edge_tetras[flippable_edges])])
                     
-                    neighbor_edges = array_unique(np.sort(np.concatenate([[list(triangulation_topomesh.borders(1,e)) for e in triangulation_topomesh.regions(0,c)] for c in neighbor_cells])))
+                    matching_flipped_tetras = vq(np.concatenate(edge_flipped_tetras[flippable_edges]),np.sort(image_cell_vertex.keys()))[1] == 0
+                    matching_flipped_tetra_edges = np.concatenate([np.ones(tetras.shape[0])*e for e,tetras in zip(triangulation_topomesh.wisp_property('cells',1).keys()[flippable_edges],edge_flipped_tetras[flippable_edges])])
                     
-                    existing_edges = np.sort([list(triangulation_topomesh.borders(1,e)) for e in list(triangulation_topomesh.region_neighbors(1,edge_id))])
-                    existing_edge_count = np.array([len(list(triangulation_topomesh.regions(1,e,2))) for e in list(triangulation_topomesh.region_neighbors(1,edge_id))])
-        
-                    tetra_edges = np.concatenate(tetras[:,tetra_triangle_edge_list])
-                    flipped_tetra_edges = np.concatenate(flipped_tetras[:,tetra_triangle_edge_list])
+                    edge_matching_tetras = nd.sum(matching_tetras,matching_tetra_edges,index=triangulation_topomesh.wisp_property('cells',1).keys())
+                    edge_matching_flipped_tetras = nd.sum(matching_flipped_tetras,matching_flipped_tetra_edges,index=triangulation_topomesh.wisp_property('cells',1).keys())
+                    edge_image_energy_variation = edge_matching_tetras - edge_matching_flipped_tetras
+                    edge_energy_variation += omega_energies['image']*edge_image_energy_variation
+                
+                if omega_energies.has_key('adjacency'):
+                    cell_adjacencies = np.array([len(list(triangulation_topomesh.region_neighbors(0,c))) for c in triangulation_topomesh.wisps(0)])
+                    cell_exterior_adjacencies = np.array([1 in triangulation_topomesh.region_neighbors(0,c) for c in triangulation_topomesh.wisps(0)])
+                    cell_adjacencies = array_dict(cell_adjacencies-cell_exterior_adjacencies,list(triangulation_topomesh.wisps(0)))
+                    edge_adjacency_energy_variation = np.zeros(triangulation_topomesh.nb_wisps(1),float)
+                    flip_exterior = edge_cells.min(axis=1)==1
                     
-                    created_edges = flipped_tetra_edges[vq(flipped_tetra_edges,tetra_edges)[1]>0]
-                        
-                    if (len(created_edges) > 0) and (vq(created_edges,neighbor_edges)[1].min() == 0):
+                    edge_adjacency_energy_variation[flip_exterior] -= np.power(cell_adjacencies.values(edge_cells.max(axis=1)[flip_exterior])-epidermis_neighborhood,2.0)
+                    edge_adjacency_energy_variation[flip_exterior] += np.power(cell_adjacencies.values(edge_cells.max(axis=1)[flip_exterior])-inner_neighborhood,2.0)
+                    edge_adjacency_energy_variation[True - flip_exterior] -= np.power(cell_adjacencies.values(edge_cells[True - flip_exterior])-inner_neighborhood,2.0).sum(axis=1)
+                    edge_adjacency_energy_variation[True - flip_exterior] += np.power(cell_adjacencies.values(edge_cells[True - flip_exterior])-1-inner_neighborhood,2.0).sum(axis=1)
+                    
+                    edge_tetra_edges = np.array([array_unique(np.sort(np.concatenate(t[:,tetra_triangle_edge_list]))) for t in edge_tetras])
+                    edge_flipped_tetra_edges = np.array([array_unique(np.sort(np.concatenate(t[:,tetra_triangle_edge_list]))) for t in edge_flipped_tetras])
+                    edge_created_edges = np.array([f_e[vq(f_e,e)[1]>0] for f_e,e in zip(edge_flipped_tetra_edges,edge_tetra_edges)])
+                    edge_created_edge_edges = np.concatenate([e*np.ones(len(edge_created_edges[e])) for e in xrange(triangulation_topomesh.nb_wisps(1))])
+                    edge_created_edges = np.concatenate(edge_created_edges)
+                    
+                    created_edge_adjacency_energy_variation = np.zeros(len(edge_created_edges),float)
+                    created_exterior = edge_created_edges.min(axis=1)==1
+                    created_edge_adjacency_energy_variation[created_exterior] -= np.power(cell_adjacencies.values(edge_created_edges.max(axis=1)[created_exterior])-inner_neighborhood,2.0)
+                    created_edge_adjacency_energy_variation[created_exterior] += np.power(cell_adjacencies.values(edge_created_edges.max(axis=1)[created_exterior])-epidermis_neighborhood,2.0)
+                    created_edge_adjacency_energy_variation[True - created_exterior] -= np.power(cell_adjacencies.values(edge_created_edges[True - created_exterior])-inner_neighborhood,2.0).sum(axis=1)
+                    created_edge_adjacency_energy_variation[True - created_exterior] += np.power(cell_adjacencies.values(edge_created_edges[True - created_exterior])+1-inner_neighborhood,2.0).sum(axis=1)
+                    
+                    edge_creation_adjacency_energy_variation = nd.sum(created_edge_adjacency_energy_variation,edge_created_edge_edges,index=np.arange(triangulation_topomesh.nb_wisps(1)))
+                    edge_adjacency_energy_variation += edge_creation_adjacency_energy_variation
+                    
+                    edge_energy_variation += omega_energies['adjacency']*edge_adjacency_energy_variation
+                
+                if omega_energies.has_key('geometry'):
+                
+                    edge_tetra_max_distance = np.array([tetra_geometric_features(edge_tetras[e],edge_positions[e],features=['max_distance']) for e in xrange(len(edge_tetras))])
+                    edge_flipped_tetra_max_distance = np.array([tetra_geometric_features(edge_flipped_tetras[e],edge_positions[e],features=['max_distance']) for e in xrange(len(edge_tetras))])
+                    
+                    edge_tetra_eccentricity = np.array([tetra_geometric_features(edge_tetras[e],edge_positions[e],features=['eccentricity']) for e in xrange(len(edge_tetras))])
+                    edge_flipped_tetra_eccentricity = np.array([tetra_geometric_features(edge_flipped_tetras[e],edge_positions[e],features=['eccentricity']) for e in xrange(len(edge_tetras))])
+                    
+                    edge_geometry_energy_variation = -np.array(map(np.mean,edge_tetra_max_distance)) + np.array(map(np.mean,edge_flipped_tetra_max_distance))
+                    edge_geometry_energy_variation += 10.*(-np.array(map(np.max,edge_tetra_eccentricity)) + np.array(map(np.max,edge_flipped_tetra_eccentricity)))
+                    edge_energy_variation += omega_energies['geometry']*edge_geometry_energy_variation
+                
+                
+                edge_energy_variation[True-flippable_edges] = 1000.
+                sorted_energy_edges = np.argsort(edge_energy_variation)
+                
+                end_time = time()
+                print "--> Computing edge flip energy variations [",end_time-start_time,"s]"
+                
+                flip_start_time = time()
+                flipped_edges = []
+                suboptimal_flipped_edges = []
+                modified_edges = []
+                
+                for edge_to_flip in sorted_energy_edges:
+                    start_time = time()
+                    edge_id = triangulation_topomesh.wisp_property('cells',1).keys()[edge_to_flip]
+                    energy_variation = edge_energy_variation[edge_to_flip]
+                    
+                    cell_flip_probability = np.exp(-energy_variation/simulated_annealing_temperature)
+                    if edge_id in modified_edges or energy_variation >= 1000:
                         cell_flip_probability = 0.
-                    else:     
-                        tetra_edge_match = vq(tetra_edges,existing_edges)[0][vq(tetra_edges,existing_edges)[1]==0]
-                        tetra_edge_count = nd.sum(np.ones(tetra_edge_match.shape[0]),tetra_edge_match,index=np.arange(existing_edges.shape[0]))
+                    else:
+                        tetras = edge_tetras[edge_to_flip]
+                        flipped_tetras = edge_flipped_tetras[edge_to_flip]
+                        cells = edge_cells[edge_to_flip]
+                        neighbor_cells = edge_neighbor_cells[edge_to_flip]
                         
-                        flipped_tetra_edge_match = vq(flipped_tetra_edges,existing_edges)[0][vq(flipped_tetra_edges,existing_edges)[1]==0]
-                        flipped_tetra_edge_count = nd.sum(np.ones(flipped_tetra_edge_match.shape[0]),flipped_tetra_edge_match,index=np.arange(existing_edges.shape[0])) 
+                        neighbor_edges = array_unique(np.sort(np.concatenate([[list(triangulation_topomesh.borders(1,e)) for e in triangulation_topomesh.regions(0,c)] for c in neighbor_cells])))
+                        
+                        existing_edges = np.sort([list(triangulation_topomesh.borders(1,e)) for e in list(triangulation_topomesh.region_neighbors(1,edge_id))])
+                        existing_edge_count = np.array([len(list(triangulation_topomesh.regions(1,e,2))) for e in list(triangulation_topomesh.region_neighbors(1,edge_id))])
+            
+                        tetra_edges = np.concatenate(tetras[:,tetra_triangle_edge_list])
+                        flipped_tetra_edges = np.concatenate(flipped_tetras[:,tetra_triangle_edge_list])
+                        
+                        created_edges = flipped_tetra_edges[vq(flipped_tetra_edges,tetra_edges)[1]>0]
                             
-                        if (existing_edge_count-tetra_edge_count+flipped_tetra_edge_count).min() < 3:
+                        if (len(created_edges) > 0) and (vq(created_edges,neighbor_edges)[1].min() == 0):
                             cell_flip_probability = 0.
-                    
-                if np.random.rand() < cell_flip_probability:
-                
-                    flipped_tetra_triangle_cells = array_unique(np.concatenate(np.sort(flipped_tetras[:,tetra_triangle_list])))
-                    edge_tetra_triangles = np.unique(triangulation_topomesh.wisp_property('triangles',3).values(triangulation_topomesh.wisp_property('cells',1)[edge_id]))
-                    edge_triangles = triangulation_topomesh.wisp_property('regions',1)[edge_id]
-                    edge_neighbor_triangles = array_difference(edge_tetra_triangles,edge_triangles)
-                    edge_neighbor_triangle_cells = np.sort(triangulation_topomesh.wisp_property('vertices',2).values(edge_neighbor_triangles))
-                    flipped_tetra_triangle_matching = vq(flipped_tetra_triangle_cells,edge_neighbor_triangle_cells)
-                    triangle_fids = {}
-                    for t,match,distance in zip(flipped_tetra_triangle_cells,flipped_tetra_triangle_matching[0],flipped_tetra_triangle_matching[1]):
-                        if distance == 0:
-                            triangle_fids[tuple(t)] = edge_neighbor_triangles[match]
-                    
-                    flipped_tetra_edge_cells = array_unique(np.concatenate(np.sort(np.concatenate(flipped_tetras[:,tetra_triangle_list]))[:,triangle_edge_list]))
-                    edge_tetra_edges = np.unique(triangulation_topomesh.wisp_property('edges',3).values(triangulation_topomesh.wisp_property('cells',1)[edge_id]))
-                    edge_neighbor_edges = array_difference(edge_tetra_edges,np.array([edge_id]))
-                    edge_neighbor_edge_cells = np.sort(triangulation_topomesh.wisp_property('vertices',1).values(edge_neighbor_edges))
-                    flipped_tetra_edge_matching = vq(flipped_tetra_edge_cells,edge_neighbor_edge_cells)
-                    edge_eids = {}
-                    for e,match,distance in zip(flipped_tetra_edge_cells,flipped_tetra_edge_matching[0],flipped_tetra_edge_matching[1]):
-                        if distance == 0:
-                            edge_eids[tuple(e)] = edge_neighbor_edges[match]
+                        else:     
+                            tetra_edge_match = vq(tetra_edges,existing_edges)[0][vq(tetra_edges,existing_edges)[1]==0]
+                            tetra_edge_count = nd.sum(np.ones(tetra_edge_match.shape[0]),tetra_edge_match,index=np.arange(existing_edges.shape[0]))
                             
-                    edge_flipped_tids = []
-                    for tetra in flipped_tetras:
-                        tid = triangulation_topomesh.add_wisp(3)
-                        edge_flipped_tids.append(tid)
-                        for t in np.sort(tetra[tetra_triangle_list]):
-                            if triangle_fids.has_key(tuple(t)):
-                                fid = triangle_fids[tuple(t)]
-                            else:
-                                fid = triangulation_topomesh.add_wisp(2)
-                                triangle_fids[tuple(t)] = fid
-                                for e in np.sort(t[triangle_edge_list]):
-                                    if edge_eids.has_key(tuple(e)):
-                                        eid = edge_eids[tuple(e)]
-                                    else:
-                                        eid = triangulation_topomesh.add_wisp(1)
-                                        edge_eids[tuple(e)] = eid
-                                        for c in e:
-                                            triangulation_topomesh.link(1,eid,c)
-                                    triangulation_topomesh.link(2,fid,eid)
-                            triangulation_topomesh.link(3,tid,fid)
-                    edge_flipped_tids = np.array(edge_flipped_tids)
+                            flipped_tetra_edge_match = vq(flipped_tetra_edges,existing_edges)[0][vq(flipped_tetra_edges,existing_edges)[1]==0]
+                            flipped_tetra_edge_count = nd.sum(np.ones(flipped_tetra_edge_match.shape[0]),flipped_tetra_edge_match,index=np.arange(existing_edges.shape[0])) 
                                 
-                    for c in triangulation_topomesh.borders(1,edge_id):
-                        triangulation_topomesh.unlink(1,edge_id,c)
-                    triangles_to_remove = []
-                    for fid in triangulation_topomesh.regions(1,edge_id):
-                        triangles_to_remove.append(fid)
-                    tetras_to_remove = []
-                    for tid in triangulation_topomesh.regions(1,edge_id,2):
-                        tetras_to_remove.append(tid)
-                    for tid in tetras_to_remove:
-                        triangulation_topomesh.remove_wisp(3,tid)
-                    for fid in triangles_to_remove:
-                        triangulation_topomesh.remove_wisp(2,fid)
-                    triangulation_topomesh.remove_wisp(1,edge_id)
-                    flipped_edges.append(edge_id)
-                    if cell_flip_probability<1:
-                        suboptimal_flipped_edges.append(edge_id)
+                            if (existing_edge_count-tetra_edge_count+flipped_tetra_edge_count).min() < 3:
+                                cell_flip_probability = 0.
+                        
+                    if np.random.rand() < cell_flip_probability:
                     
-                    edge_tids = tetras_to_remove
-                    
-                    modified_edges += edge_eids.values()
-                    #modified_edges += list(triangulation_topomesh.border_neighbors(1,edge_id))
-                    #modified_edges += list(np.unique(np.concatenate([list(triangulation_topomesh.region_neighbors(1,e)) for e in edge_eids.values()])))
-                    
-                    end_time = time()
-                    print "  --> Flipped edge ",edge_id," : ",edge_tids," -> ",edge_flipped_tids," (dE = ",energy_variation,") [",end_time-start_time,"s]" 
-                    
-            flip_end_time = time()
-            print len(flipped_edges),' Edges Flipped (',len(suboptimal_flipped_edges),' non-optimal) [',flip_end_time-flip_start_time,'s]'
-            n_flips += len(flipped_edges)
-            
-            
-            n_iteration_edge_removals += len(flipped_edges)
+                        flipped_tetra_triangle_cells = array_unique(np.concatenate(np.sort(flipped_tetras[:,tetra_triangle_list])))
+                        edge_tetra_triangles = np.unique(triangulation_topomesh.wisp_property('triangles',3).values(triangulation_topomesh.wisp_property('cells',1)[edge_id]))
+                        edge_triangles = triangulation_topomesh.wisp_property('regions',1)[edge_id]
+                        edge_neighbor_triangles = array_difference(edge_tetra_triangles,edge_triangles)
+                        edge_neighbor_triangle_cells = np.sort(triangulation_topomesh.wisp_property('vertices',2).values(edge_neighbor_triangles))
+                        flipped_tetra_triangle_matching = vq(flipped_tetra_triangle_cells,edge_neighbor_triangle_cells)
+                        triangle_fids = {}
+                        for t,match,distance in zip(flipped_tetra_triangle_cells,flipped_tetra_triangle_matching[0],flipped_tetra_triangle_matching[1]):
+                            if distance == 0:
+                                triangle_fids[tuple(t)] = edge_neighbor_triangles[match]
+                        
+                        flipped_tetra_edge_cells = array_unique(np.concatenate(np.sort(np.concatenate(flipped_tetras[:,tetra_triangle_list]))[:,triangle_edge_list]))
+                        edge_tetra_edges = np.unique(triangulation_topomesh.wisp_property('edges',3).values(triangulation_topomesh.wisp_property('cells',1)[edge_id]))
+                        edge_neighbor_edges = array_difference(edge_tetra_edges,np.array([edge_id]))
+                        edge_neighbor_edge_cells = np.sort(triangulation_topomesh.wisp_property('vertices',1).values(edge_neighbor_edges))
+                        flipped_tetra_edge_matching = vq(flipped_tetra_edge_cells,edge_neighbor_edge_cells)
+                        edge_eids = {}
+                        for e,match,distance in zip(flipped_tetra_edge_cells,flipped_tetra_edge_matching[0],flipped_tetra_edge_matching[1]):
+                            if distance == 0:
+                                edge_eids[tuple(e)] = edge_neighbor_edges[match]
+                                
+                        edge_flipped_tids = []
+                        for tetra in flipped_tetras:
+                            tid = triangulation_topomesh.add_wisp(3)
+                            edge_flipped_tids.append(tid)
+                            for t in np.sort(tetra[tetra_triangle_list]):
+                                if triangle_fids.has_key(tuple(t)):
+                                    fid = triangle_fids[tuple(t)]
+                                else:
+                                    fid = triangulation_topomesh.add_wisp(2)
+                                    triangle_fids[tuple(t)] = fid
+                                    for e in np.sort(t[triangle_edge_list]):
+                                        if edge_eids.has_key(tuple(e)):
+                                            eid = edge_eids[tuple(e)]
+                                        else:
+                                            eid = triangulation_topomesh.add_wisp(1)
+                                            edge_eids[tuple(e)] = eid
+                                            for c in e:
+                                                triangulation_topomesh.link(1,eid,c)
+                                        triangulation_topomesh.link(2,fid,eid)
+                                triangulation_topomesh.link(3,tid,fid)
+                        edge_flipped_tids = np.array(edge_flipped_tids)
+                                    
+                        for c in triangulation_topomesh.borders(1,edge_id):
+                            triangulation_topomesh.unlink(1,edge_id,c)
+                        triangles_to_remove = []
+                        for fid in triangulation_topomesh.regions(1,edge_id):
+                            triangles_to_remove.append(fid)
+                        tetras_to_remove = []
+                        for tid in triangulation_topomesh.regions(1,edge_id,2):
+                            tetras_to_remove.append(tid)
+                        for tid in tetras_to_remove:
+                            triangulation_topomesh.remove_wisp(3,tid)
+                        for fid in triangles_to_remove:
+                            triangulation_topomesh.remove_wisp(2,fid)
+                        triangulation_topomesh.remove_wisp(1,edge_id)
+                        flipped_edges.append(edge_id)
+                        if cell_flip_probability<1:
+                            suboptimal_flipped_edges.append(edge_id)
+                        
+                        edge_tids = tetras_to_remove
+                        
+                        modified_edges += edge_eids.values()
+                        #modified_edges += list(triangulation_topomesh.border_neighbors(1,edge_id))
+                        #modified_edges += list(np.unique(np.concatenate([list(triangulation_topomesh.region_neighbors(1,e)) for e in edge_eids.values()])))
+                        
+                        end_time = time()
+                        print "  --> Flipped edge ",edge_id," : ",edge_tids," -> ",edge_flipped_tids," (dE = ",energy_variation,") [",end_time-start_time,"s]" 
+                        
+                flip_end_time = time()
+                print len(flipped_edges),' Edges Flipped (',len(suboptimal_flipped_edges),' non-optimal) [',flip_end_time-flip_start_time,'s]'
+                n_flips += len(flipped_edges)
+                
+                
+                n_iteration_edge_removals += len(flipped_edges)
 
             compute_topomesh_property(triangulation_topomesh,'vertices',1)
             compute_topomesh_property(triangulation_topomesh,'regions',1)
@@ -1197,157 +1200,159 @@ def tetrahedrization_topomesh_topological_optimization(input_triangulation_topom
             
             triangle_energy_variation = np.zeros(triangulation_topomesh.nb_wisps(2),float)
             
-            if omega_energies.has_key('image'):
-                matching_tetras = vq(np.concatenate(triangle_tetras[flippable_triangles]),np.sort(image_cell_vertex.keys()))[1]==0
-                matching_tetra_triangles = np.concatenate([np.ones(tetras.shape[0])*t for t,tetras in zip(triangulation_topomesh.wisp_property('cells',2).keys()[flippable_triangles],triangle_tetras[flippable_triangles])])
+            if len(flippable_triangles)>0:
+
+                if omega_energies.has_key('image'):
+                    matching_tetras = vq(np.concatenate(triangle_tetras[flippable_triangles]),np.sort(image_cell_vertex.keys()))[1]==0
+                    matching_tetra_triangles = np.concatenate([np.ones(tetras.shape[0])*t for t,tetras in zip(triangulation_topomesh.wisp_property('cells',2).keys()[flippable_triangles],triangle_tetras[flippable_triangles])])
+                    
+                    matching_flipped_tetras = vq(np.concatenate(triangle_flipped_tetras[flippable_triangles]),np.sort(image_cell_vertex.keys()))[1] == 0
+                    matching_flipped_tetra_triangles = np.concatenate([np.ones(tetras.shape[0])*t for t,tetras in zip(triangulation_topomesh.wisp_property('cells',2).keys()[flippable_triangles],triangle_flipped_tetras[flippable_triangles])])
+                    
+                    triangle_matching_tetras = nd.sum(matching_tetras,matching_tetra_triangles,index=triangulation_topomesh.wisp_property('cells',2).keys())
+                    triangle_matching_flipped_tetras = nd.sum(matching_flipped_tetras,matching_flipped_tetra_triangles,index=triangulation_topomesh.wisp_property('cells',2).keys())
+                    triangle_image_energy_variation = 1 + triangle_matching_tetras - triangle_matching_flipped_tetras
+                    triangle_energy_variation += omega_energies['image']*triangle_image_energy_variation
                 
-                matching_flipped_tetras = vq(np.concatenate(triangle_flipped_tetras[flippable_triangles]),np.sort(image_cell_vertex.keys()))[1] == 0
-                matching_flipped_tetra_triangles = np.concatenate([np.ones(tetras.shape[0])*t for t,tetras in zip(triangulation_topomesh.wisp_property('cells',2).keys()[flippable_triangles],triangle_flipped_tetras[flippable_triangles])])
+                if omega_energies.has_key('adjacency'):
+                    cell_adjacencies = np.array([len(list(triangulation_topomesh.region_neighbors(0,c))) for c in triangulation_topomesh.wisps(0)])
+                    cell_exterior_adjacencies = np.array([1 in triangulation_topomesh.region_neighbors(0,c) for c in triangulation_topomesh.wisps(0)])
+                    cell_adjacencies = array_dict(cell_adjacencies-cell_exterior_adjacencies,list(triangulation_topomesh.wisps(0)))
+                    for c in triangulation_topomesh.wisps(0):
+                        if 1 in triangulation_topomesh.region_neighbors(0,c):
+                            cell_adjacencies
+                    triangle_adjacency_energy_variation = np.zeros(triangulation_topomesh.nb_wisps(2),float)
+                    flip_exterior = triangle_neighbor_cells.min(axis=1)==1
+                    
+                    triangle_adjacency_energy_variation[flip_exterior] -= np.power(cell_adjacencies.values(triangle_neighbor_cells.max(axis=1)[flip_exterior])-inner_neighborhood,2.0)
+                    triangle_adjacency_energy_variation[flip_exterior] += np.power(cell_adjacencies.values(triangle_neighbor_cells.max(axis=1)[flip_exterior])-epidermis_neighborhood,2.0)
+                    triangle_adjacency_energy_variation[True - flip_exterior] -= np.power(cell_adjacencies.values(triangle_neighbor_cells[True - flip_exterior])-inner_neighborhood,2.0).sum(axis=1)
+                    triangle_adjacency_energy_variation[True - flip_exterior] += np.power(cell_adjacencies.values(triangle_neighbor_cells[True - flip_exterior])+1-inner_neighborhood,2.0).sum(axis=1)
+                    triangle_energy_variation += omega_energies['adjacency']*triangle_adjacency_energy_variation
                 
-                triangle_matching_tetras = nd.sum(matching_tetras,matching_tetra_triangles,index=triangulation_topomesh.wisp_property('cells',2).keys())
-                triangle_matching_flipped_tetras = nd.sum(matching_flipped_tetras,matching_flipped_tetra_triangles,index=triangulation_topomesh.wisp_property('cells',2).keys())
-                triangle_image_energy_variation = 1 + triangle_matching_tetras - triangle_matching_flipped_tetras
-                triangle_energy_variation += omega_energies['image']*triangle_image_energy_variation
-            
-            if omega_energies.has_key('adjacency'):
-                cell_adjacencies = np.array([len(list(triangulation_topomesh.region_neighbors(0,c))) for c in triangulation_topomesh.wisps(0)])
-                cell_exterior_adjacencies = np.array([1 in triangulation_topomesh.region_neighbors(0,c) for c in triangulation_topomesh.wisps(0)])
-                cell_adjacencies = array_dict(cell_adjacencies-cell_exterior_adjacencies,list(triangulation_topomesh.wisps(0)))
-                for c in triangulation_topomesh.wisps(0):
-                    if 1 in triangulation_topomesh.region_neighbors(0,c):
-                        cell_adjacencies
-                triangle_adjacency_energy_variation = np.zeros(triangulation_topomesh.nb_wisps(2),float)
-                flip_exterior = triangle_neighbor_cells.min(axis=1)==1
+                if omega_energies.has_key('geometry'):
+                    from openalea.mesh.utils.geometry_tools import tetra_geometric_features
+                    
+                    triangle_tetra_max_distance = np.array([tetra_geometric_features(triangle_tetras[t],triangle_positions[t],features=['max_distance']) for t in xrange(len(triangle_tetras))])
+                    triangle_flipped_tetra_max_distance = np.array([tetra_geometric_features(triangle_flipped_tetras[t],triangle_positions[t],features=['max_distance']) for t in xrange(len(triangle_tetras))])
+                    
+                    triangle_tetra_eccentricity = np.array([tetra_geometric_features(triangle_tetras[t],triangle_positions[t],features=['eccentricity']) for t in xrange(len(triangle_tetras))])
+                    triangle_flipped_tetra_eccentricity = np.array([tetra_geometric_features(triangle_flipped_tetras[t],triangle_positions[t],features=['eccentricity']) for t in xrange(len(triangle_tetras))])
+                    
+                    triangle_geometry_energy_variation = -np.array(map(np.mean,triangle_tetra_max_distance)) + np.array(map(np.mean,triangle_flipped_tetra_max_distance))
+                    triangle_geometry_energy_variation += 10.*(-np.array(map(np.max,triangle_tetra_eccentricity)) + np.array(map(np.max,triangle_flipped_tetra_eccentricity)))
+                    triangle_energy_variation += omega_energies['geometry']*triangle_geometry_energy_variation
                 
-                triangle_adjacency_energy_variation[flip_exterior] -= np.power(cell_adjacencies.values(triangle_neighbor_cells.max(axis=1)[flip_exterior])-inner_neighborhood,2.0)
-                triangle_adjacency_energy_variation[flip_exterior] += np.power(cell_adjacencies.values(triangle_neighbor_cells.max(axis=1)[flip_exterior])-epidermis_neighborhood,2.0)
-                triangle_adjacency_energy_variation[True - flip_exterior] -= np.power(cell_adjacencies.values(triangle_neighbor_cells[True - flip_exterior])-inner_neighborhood,2.0).sum(axis=1)
-                triangle_adjacency_energy_variation[True - flip_exterior] += np.power(cell_adjacencies.values(triangle_neighbor_cells[True - flip_exterior])+1-inner_neighborhood,2.0).sum(axis=1)
-                triangle_energy_variation += omega_energies['adjacency']*triangle_adjacency_energy_variation
-            
-            if omega_energies.has_key('geometry'):
-                from openalea.mesh.utils.geometry_tools import tetra_geometric_features
+                    
+                triangle_energy_variation[True-flippable_triangles] = 1000.
+                sorted_energy_triangles = np.argsort(triangle_energy_variation)
+                end_time = time()
+                print "<-- Computing triangle flip energy variations [",end_time-start_time,"s]"
+                            
+                flipped_triangles = []
+                suboptimal_flipped_triangles = []
+                modified_triangles = []
                 
-                triangle_tetra_max_distance = np.array([tetra_geometric_features(triangle_tetras[t],triangle_positions[t],features=['max_distance']) for t in xrange(len(triangle_tetras))])
-                triangle_flipped_tetra_max_distance = np.array([tetra_geometric_features(triangle_flipped_tetras[t],triangle_positions[t],features=['max_distance']) for t in xrange(len(triangle_tetras))])
-                
-                triangle_tetra_eccentricity = np.array([tetra_geometric_features(triangle_tetras[t],triangle_positions[t],features=['eccentricity']) for t in xrange(len(triangle_tetras))])
-                triangle_flipped_tetra_eccentricity = np.array([tetra_geometric_features(triangle_flipped_tetras[t],triangle_positions[t],features=['eccentricity']) for t in xrange(len(triangle_tetras))])
-                
-                triangle_geometry_energy_variation = -np.array(map(np.mean,triangle_tetra_max_distance)) + np.array(map(np.mean,triangle_flipped_tetra_max_distance))
-                triangle_geometry_energy_variation += 10.*(-np.array(map(np.max,triangle_tetra_eccentricity)) + np.array(map(np.max,triangle_flipped_tetra_eccentricity)))
-                triangle_energy_variation += omega_energies['geometry']*triangle_geometry_energy_variation
-            
-                
-            triangle_energy_variation[True-flippable_triangles] = 1000.
-            sorted_energy_triangles = np.argsort(triangle_energy_variation)
-            end_time = time()
-            print "<-- Computing triangle flip energy variations [",end_time-start_time,"s]"
-                        
-            flipped_triangles = []
-            suboptimal_flipped_triangles = []
-            modified_triangles = []
-            
-            flip_start_time = time()
-            for triangle_to_flip in sorted_energy_triangles:
-                start_time = time()
-                triangle_id = triangulation_topomesh.wisp_property('cells',2).keys()[triangle_to_flip]
-                energy_variation = triangle_energy_variation[triangle_to_flip]
-                
-                cell_flip_probability = np.exp(-energy_variation/simulated_annealing_temperature)
-                if triangle_id in modified_triangles or energy_variation >= 1000:
-                    cell_flip_probability = 0.
-                else:
-                    tetras = triangle_tetras[triangle_to_flip]
-                    flipped_tetras = triangle_flipped_tetras[triangle_to_flip]
-                    cells = triangle_cells[triangle_to_flip]
-                    neighbor_cells = triangle_neighbor_cells[triangle_to_flip]
-                
-                    if neighbor_cells[1] in triangulation_topomesh.region_neighbors(0,neighbor_cells[0]):
+                flip_start_time = time()
+                for triangle_to_flip in sorted_energy_triangles:
+                    start_time = time()
+                    triangle_id = triangulation_topomesh.wisp_property('cells',2).keys()[triangle_to_flip]
+                    energy_variation = triangle_energy_variation[triangle_to_flip]
+                    
+                    cell_flip_probability = np.exp(-energy_variation/simulated_annealing_temperature)
+                    if triangle_id in modified_triangles or energy_variation >= 1000:
                         cell_flip_probability = 0.
                     else:
-                        existing_edge_ids = np.unique([list(triangulation_topomesh.borders(3,t,2)) for t in triangulation_topomesh.regions(2,triangle_id)])
-                        existing_edges = np.sort([list(triangulation_topomesh.borders(1,e)) for e in existing_edge_ids]) 
-                        existing_edge_count = np.array([len(list(triangulation_topomesh.regions(1,e,2))) for e in existing_edge_ids]) 
-                      
-                        tetra_edges = np.concatenate(tetras[:,tetra_triangle_edge_list])
-                        tetra_edge_match = vq(tetra_edges,existing_edges)[0][vq(tetra_edges,existing_edges)[1]==0]
-                        tetra_edge_count = nd.sum(np.ones(tetra_edge_match.shape[0]),tetra_edge_match,index=np.arange(existing_edges.shape[0]))
-                       
-                        flipped_tetra_edges = np.concatenate(flipped_tetras[:,tetra_triangle_edge_list])
-                        flipped_tetra_edge_match = vq(flipped_tetra_edges,existing_edges)[0][vq(flipped_tetra_edges,existing_edges)[1]==0]
-                        flipped_tetra_edge_count = nd.sum(np.ones(flipped_tetra_edge_match.shape[0]),flipped_tetra_edge_match,index=np.arange(existing_edges.shape[0]))
-            
-                        if (existing_edge_count-tetra_edge_count+flipped_tetra_edge_count).min() < 3:
+                        tetras = triangle_tetras[triangle_to_flip]
+                        flipped_tetras = triangle_flipped_tetras[triangle_to_flip]
+                        cells = triangle_cells[triangle_to_flip]
+                        neighbor_cells = triangle_neighbor_cells[triangle_to_flip]
+                    
+                        if neighbor_cells[1] in triangulation_topomesh.region_neighbors(0,neighbor_cells[0]):
                             cell_flip_probability = 0.
-                    
-                if np.random.rand() < cell_flip_probability:
-                
-                    flipped_tetra_triangle_cells = array_unique(np.concatenate(np.sort(flipped_tetras[:,tetra_triangle_list])))
-                    triangle_tetra_triangles = np.unique(triangulation_topomesh.wisp_property('triangles',3).values(triangulation_topomesh.wisp_property('cells',2)[triangle_id]))
-                    triangle_neighbor_triangles = array_difference(triangle_tetra_triangles,np.array([triangle_id]))
-                    triangle_neighbor_triangle_cells = np.sort(triangulation_topomesh.wisp_property('vertices',2).values(triangle_neighbor_triangles))
-                    flipped_tetra_triangle_matching = vq(flipped_tetra_triangle_cells,triangle_neighbor_triangle_cells)
-                    triangle_fids = {}
-                    for t,match,distance in zip(flipped_tetra_triangle_cells,flipped_tetra_triangle_matching[0],flipped_tetra_triangle_matching[1]):
-                        if distance == 0:
-                            triangle_fids[tuple(t)] = triangle_neighbor_triangles[match]
-                    
-                    
-                    flipped_tetra_edge_cells = array_unique(np.concatenate(np.sort(np.concatenate(flipped_tetras[:,tetra_triangle_list]))[:,triangle_edge_list]))
-                    triangle_neighbor_edges = np.unique(triangulation_topomesh.wisp_property('edges',3).values(triangulation_topomesh.wisp_property('cells',2)[triangle_id]))
-                    triangle_neighbor_edge_cells = np.sort(triangulation_topomesh.wisp_property('vertices',1).values(triangle_neighbor_edges))
-                    flipped_tetra_edge_matching = vq(flipped_tetra_edge_cells,triangle_neighbor_edge_cells)
-                    edge_eids = {}
-                    for e,match,distance in zip(flipped_tetra_edge_cells,flipped_tetra_edge_matching[0],flipped_tetra_edge_matching[1]):
-                        if distance == 0:
-                            edge_eids[tuple(e)] = triangle_neighbor_edges[match]
+                        else:
+                            existing_edge_ids = np.unique([list(triangulation_topomesh.borders(3,t,2)) for t in triangulation_topomesh.regions(2,triangle_id)])
+                            existing_edges = np.sort([list(triangulation_topomesh.borders(1,e)) for e in existing_edge_ids]) 
+                            existing_edge_count = np.array([len(list(triangulation_topomesh.regions(1,e,2))) for e in existing_edge_ids]) 
                           
-                    triangle_flipped_tids = []
-                    for tetra in flipped_tetras:
-                        tid = triangulation_topomesh.add_wisp(3)
-                        triangle_flipped_tids.append(tid)
-                        for t in np.sort(tetra[tetra_triangle_list]):
-                            if triangle_fids.has_key(tuple(t)):
-                                fid = triangle_fids[tuple(t)]
-                            else:
-                                fid = triangulation_topomesh.add_wisp(2)
-                                triangle_fids[tuple(t)] = fid
-                                for e in np.sort(t[triangle_edge_list]):
-                                    if edge_eids.has_key(tuple(e)):
-                                        eid = edge_eids[tuple(e)]
-                                    else:
-                                        eid = triangulation_topomesh.add_wisp(1)
-                                        edge_eids[tuple(e)] = eid
-                                        for c in e:
-                                            triangulation_topomesh.link(1,eid,c)
-                                    triangulation_topomesh.link(2,fid,eid)
-                            triangulation_topomesh.link(3,tid,fid)
-                    triangle_flipped_tids = np.array(triangle_flipped_tids)
-                     
-                    tetras_to_remove = []
-                    for tid in triangulation_topomesh.regions(2,triangle_id):
-                        tetras_to_remove.append(tid)
-                    for tid in tetras_to_remove:
-                        triangulation_topomesh.remove_wisp(3,tid)
-                    triangulation_topomesh.remove_wisp(2,triangle_id)
-                    flipped_triangles.append(triangle_id)
-                    if cell_flip_probability<1:
-                        suboptimal_flipped_triangles.append(triangle_id)
+                            tetra_edges = np.concatenate(tetras[:,tetra_triangle_edge_list])
+                            tetra_edge_match = vq(tetra_edges,existing_edges)[0][vq(tetra_edges,existing_edges)[1]==0]
+                            tetra_edge_count = nd.sum(np.ones(tetra_edge_match.shape[0]),tetra_edge_match,index=np.arange(existing_edges.shape[0]))
+                           
+                            flipped_tetra_edges = np.concatenate(flipped_tetras[:,tetra_triangle_edge_list])
+                            flipped_tetra_edge_match = vq(flipped_tetra_edges,existing_edges)[0][vq(flipped_tetra_edges,existing_edges)[1]==0]
+                            flipped_tetra_edge_count = nd.sum(np.ones(flipped_tetra_edge_match.shape[0]),flipped_tetra_edge_match,index=np.arange(existing_edges.shape[0]))
+                
+                            if (existing_edge_count-tetra_edge_count+flipped_tetra_edge_count).min() < 3:
+                                cell_flip_probability = 0.
+                        
+                    if np.random.rand() < cell_flip_probability:
                     
-                    triangle_tids = tetras_to_remove
-                    
-                    modified_triangles += triangle_fids.values()
+                        flipped_tetra_triangle_cells = array_unique(np.concatenate(np.sort(flipped_tetras[:,tetra_triangle_list])))
+                        triangle_tetra_triangles = np.unique(triangulation_topomesh.wisp_property('triangles',3).values(triangulation_topomesh.wisp_property('cells',2)[triangle_id]))
+                        triangle_neighbor_triangles = array_difference(triangle_tetra_triangles,np.array([triangle_id]))
+                        triangle_neighbor_triangle_cells = np.sort(triangulation_topomesh.wisp_property('vertices',2).values(triangle_neighbor_triangles))
+                        flipped_tetra_triangle_matching = vq(flipped_tetra_triangle_cells,triangle_neighbor_triangle_cells)
+                        triangle_fids = {}
+                        for t,match,distance in zip(flipped_tetra_triangle_cells,flipped_tetra_triangle_matching[0],flipped_tetra_triangle_matching[1]):
+                            if distance == 0:
+                                triangle_fids[tuple(t)] = triangle_neighbor_triangles[match]
+                        
+                        
+                        flipped_tetra_edge_cells = array_unique(np.concatenate(np.sort(np.concatenate(flipped_tetras[:,tetra_triangle_list]))[:,triangle_edge_list]))
+                        triangle_neighbor_edges = np.unique(triangulation_topomesh.wisp_property('edges',3).values(triangulation_topomesh.wisp_property('cells',2)[triangle_id]))
+                        triangle_neighbor_edge_cells = np.sort(triangulation_topomesh.wisp_property('vertices',1).values(triangle_neighbor_edges))
+                        flipped_tetra_edge_matching = vq(flipped_tetra_edge_cells,triangle_neighbor_edge_cells)
+                        edge_eids = {}
+                        for e,match,distance in zip(flipped_tetra_edge_cells,flipped_tetra_edge_matching[0],flipped_tetra_edge_matching[1]):
+                            if distance == 0:
+                                edge_eids[tuple(e)] = triangle_neighbor_edges[match]
+                              
+                        triangle_flipped_tids = []
+                        for tetra in flipped_tetras:
+                            tid = triangulation_topomesh.add_wisp(3)
+                            triangle_flipped_tids.append(tid)
+                            for t in np.sort(tetra[tetra_triangle_list]):
+                                if triangle_fids.has_key(tuple(t)):
+                                    fid = triangle_fids[tuple(t)]
+                                else:
+                                    fid = triangulation_topomesh.add_wisp(2)
+                                    triangle_fids[tuple(t)] = fid
+                                    for e in np.sort(t[triangle_edge_list]):
+                                        if edge_eids.has_key(tuple(e)):
+                                            eid = edge_eids[tuple(e)]
+                                        else:
+                                            eid = triangulation_topomesh.add_wisp(1)
+                                            edge_eids[tuple(e)] = eid
+                                            for c in e:
+                                                triangulation_topomesh.link(1,eid,c)
+                                        triangulation_topomesh.link(2,fid,eid)
+                                triangulation_topomesh.link(3,tid,fid)
+                        triangle_flipped_tids = np.array(triangle_flipped_tids)
+                         
+                        tetras_to_remove = []
+                        for tid in triangulation_topomesh.regions(2,triangle_id):
+                            tetras_to_remove.append(tid)
+                        for tid in tetras_to_remove:
+                            triangulation_topomesh.remove_wisp(3,tid)
+                        triangulation_topomesh.remove_wisp(2,triangle_id)
+                        flipped_triangles.append(triangle_id)
+                        if cell_flip_probability<1:
+                            suboptimal_flipped_triangles.append(triangle_id)
+                        
+                        triangle_tids = tetras_to_remove
+                        
+                        modified_triangles += triangle_fids.values()
 
-                    end_time = time()
-                    print "  --> Flipped triangle ",triangle_id," : ",triangle_tids," -> ",triangle_flipped_tids," (dE = ",energy_variation,") [",end_time-start_time,"s]" 
+                        end_time = time()
+                        print "  --> Flipped triangle ",triangle_id," : ",triangle_tids," -> ",triangle_flipped_tids," (dE = ",energy_variation,") [",end_time-start_time,"s]" 
 
-            flip_end_time = time()
-                    
-            print len(flipped_triangles),' Triangles Flipped (',len(suboptimal_flipped_triangles),' non-optimal) [',flip_end_time-flip_start_time,'s]'
-            n_flips += len(flipped_triangles)    
-            
-            n_iteration_triangle_flips += len(flipped_triangles) 
+                flip_end_time = time()
+                        
+                print len(flipped_triangles),' Triangles Flipped (',len(suboptimal_flipped_triangles),' non-optimal) [',flip_end_time-flip_start_time,'s]'
+                n_flips += len(flipped_triangles)    
+                
+                n_iteration_triangle_flips += len(flipped_triangles) 
             
             tetrahedrization_topomesh_remove_exterior(triangulation_topomesh)
             
@@ -1389,8 +1394,8 @@ def tetrahedrization_topomesh_topological_optimization(input_triangulation_topom
                 cell_interface_jaccard = jaccard_index(np.sort([image_graph.edge_vertices(e) for e in image_graph.edges()]),np.sort(triangulation_topomesh.wisp_property('vertices',1).values()))
                 print "Cell interface Jaccard (2-adjacency) : ",cell_interface_jaccard
             if image_cell_vertex != None:
-                cell_edge_jaccard = jaccard_index(np.sort(array_unique(np.concatenate(np.array(image_cell_vertex.keys())[:,tetra_triangle_list]))),np.sort(triangulation_topomesh.wisp_property('vertices',2).values()))
-                print "Cell edge Jaccard (3-adjacency) : ",cell_edge_jaccard
+                # cell_edge_jaccard = jaccard_index(np.sort(array_unique(np.concatenate(np.array(image_cell_vertex.keys())[:,tetra_triangle_list]))),np.sort(triangulation_topomesh.wisp_property('vertices',2).values()))
+                # print "Cell edge Jaccard (3-adjacency) : ",cell_edge_jaccard
                 cell_vertex_jaccard = jaccard_index(np.sort(image_cell_vertex.keys()),np.sort(triangulation_topomesh.wisp_property('vertices',3).values()))
                 print "Cell vertices Jaccard  (4-adjacency) : ",cell_vertex_jaccard
             cell_adjacencies = np.array([len(list(triangulation_topomesh.region_neighbors(0,c))) for c in triangulation_topomesh.wisps(0)])
@@ -1398,13 +1403,13 @@ def tetrahedrization_topomesh_topological_optimization(input_triangulation_topom
             cell_adjacencies = array_dict(cell_adjacencies-cell_exterior_adjacencies,list(triangulation_topomesh.wisps(0)))
             cell_target_adjcencies = epidermis_neighborhood*cell_exterior_adjacencies + inner_neighborhood*(1-cell_exterior_adjacencies)
             cell_adjacency_error = np.power((cell_adjacencies.values()[1:]-cell_target_adjcencies[1:])/np.array(cell_target_adjcencies[1:],float),2)
-            print "Adjacency Error : ",cell_adjacency_error.mean()
-            print "Inner adjacency Error : ",cell_adjacency_error[True-cell_exterior_adjacencies[1:]].mean()
-            print "Epidermis adjacency Error : ",cell_adjacency_error[cell_exterior_adjacencies[1:]].mean()
-            print "Tetrahedra maximal length              : ",np.mean(tetra_features[:,0])
-            print "Tetrahedra eccentricity (shape factor) : ",np.mean(tetra_features[:,1])
-            print "Tetrahedra minimal dihedral angle      : ",np.mean(tetra_features[:,2])
-            print "Tetrahedra maximal dihedral angle      : ",np.mean(tetra_features[:,3])
+            # print "Adjacency Error : ",cell_adjacency_error.mean()
+            # print "Inner adjacency Error : ",cell_adjacency_error[True-cell_exterior_adjacencies[1:]].mean()
+            # print "Epidermis adjacency Error : ",cell_adjacency_error[cell_exterior_adjacencies[1:]].mean()
+            # print "Tetrahedra maximal length              : ",np.mean(tetra_features[:,0])
+            # print "Tetrahedra eccentricity (shape factor) : ",np.mean(tetra_features[:,1])
+            # print "Tetrahedra minimal dihedral angle      : ",np.mean(tetra_features[:,2])
+            # print "Tetrahedra maximal dihedral angle      : ",np.mean(tetra_features[:,3])
             
     return triangulation_topomesh
     
