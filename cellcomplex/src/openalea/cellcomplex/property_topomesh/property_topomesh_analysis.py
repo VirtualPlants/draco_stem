@@ -1151,7 +1151,8 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
             face_principal_curvature_min = array_dict(face_curvature_matrix_eigenvalues[tuple([np.arange(len(epidermis_triangles)),np.argsort(np.abs(face_curvature_matrix_eigenvalues))[:,1]])].astype(float),epidermis_triangles)
             face_principal_curvature_max = array_dict(face_curvature_matrix_eigenvalues[tuple([np.arange(len(epidermis_triangles)),np.argsort(np.abs(face_curvature_matrix_eigenvalues))[:,2]])].astype(float),epidermis_triangles)
 
-            face_curvature_matrix_eigenvectors = np.transpose(face_curvature_matrix_eigenvectors,(0,2,1))
+            # face_curvature_matrix_eigenvectors = np.transpose(face_curvature_matrix_eigenvectors,(0,2,1))
+            face_curvature_matrix_eigenvectors = np.transpose(face_curvature_matrix_eigenvectors,(0,1,2))
             face_principal_direction_min = array_dict(face_curvature_matrix_eigenvectors[tuple([np.arange(len(epidermis_triangles)),np.argsort(np.abs(face_curvature_matrix_eigenvalues))[:,1]])].astype(float),epidermis_triangles)
             face_principal_direction_max = array_dict(face_curvature_matrix_eigenvectors[tuple([np.arange(len(epidermis_triangles)),np.argsort(np.abs(face_curvature_matrix_eigenvalues))[:,2]])].astype(float),epidermis_triangles)
 

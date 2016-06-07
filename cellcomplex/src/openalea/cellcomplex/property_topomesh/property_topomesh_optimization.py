@@ -1517,5 +1517,27 @@ def property_topomesh_edge_split_optimization(topomesh, maximal_length=None, ite
     return n_splits
 
 
+def property_topomesh_isotropic_remeshing(initial_topomesh, maximal_length=None, iterations=1):
+
+    topomesh = deepcopy(initial_topomesh)
+
+    n_flips = topomesh.nb_wisps(1)
+    n_splits = topomesh.nb_wisps(1)
+
+    if maximal_length is None:
+        compute_topomesh_property(topomesh,'length',1)
+        target_length = np.percentile(topomesh.wisp_property('length',1).values(),50)
+        maximal_length = 4./3. * target_length
+
+    iteration = 0
+    while (n_flips+n_splits > topomesh.nb_wisps(1)/100.) and (iteration<iterations):
+        n_splits = property_topomesh_edge_split_optimization(topomesh, maximal_length=maximal_length, iterations=1)
+        n_flips = property_topomesh_edge_flip_optimization(topomesh,omega_energies=dict([('neighborhood',0.65)]),simulated_annealing=False,iterations=3)
+        property_topomesh_vertices_deformation(topomesh,omega_forces=dict([('taubin_smoothing',0.33)]))
+        iteration += 1
+
+    return topomesh
+
+
 
 
