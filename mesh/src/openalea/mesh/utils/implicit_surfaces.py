@@ -1,1 +1,0 @@
-from openalea.cellcomplex.property_topomesh.utils.implicit_surfaces import *

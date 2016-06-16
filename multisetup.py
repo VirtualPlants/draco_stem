@@ -47,7 +47,7 @@ except ImportError:
 
 dirs = [
     "cellcomplex",
-    "mesh",
+    "mesh-oalab",
     "draco_stem",
 #    "cgal_meshing",
 ]

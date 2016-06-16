@@ -1,16 +1,31 @@
-# DRACO-STEM
+# OpenAlea Meshing Libraries
 
-Dual Reconstruction by Adjacency Complex Optimization (DRACO) - SAM Tissue Enhanced Mesh (STEM)
+Data structures, algorithms and generation pipelines for meshes in OpenAlea
 
-OpenAlea library for the reconstruction of 3D meshes from segmented shoot apical meristem (SAM) tissue images
+## Contents
 
-<img src="https://github.com/gcerutti/draco-stem/blob/master/draco_stem/logo.png" width="300">
-### Installation
+### CellComplex
 
- * Install OpenAlea
- * Probably install Mars-Alt
+Package implementing data structures for the representation of cellular complexes. The main structure is an implementation of Incidence Graphs in a class named **PropertyTopomesh**.
 
-#### Dependencies
+####Dependencies : `openalea`, `numpy`, `scipy`, `openalea-container`
 
- * NumPy
- * SciPy
+### Mesh-OALab
+
+Plugins and visual components for the integration of mesh structures in TissueLab
+
+####Dependencies : `cellcomplex`, `vtk`, `tissuelab`
+
+### DRACO-STEM
+
+Generating high-quality meshes of cell tissue from 3D segmented images :
+* **D**ual **R**econstruction by **A**djacency **C**omplex **O**ptimization
+* **S**AM **T**issue **E**nhanced **M**esh
+
+####Dependencies : `cellcomplex`, `openalea-image`, `tissue-analysis`
+
+### CGAL-Meshing
+
+Generating coarse meshes of cell tissue from 3D segmented images, and enhance them using the STEM functionalities
+
+####Dependencies : `cellcomplex`, `CGAL`, `openalea-image`, `tissue-analysis`

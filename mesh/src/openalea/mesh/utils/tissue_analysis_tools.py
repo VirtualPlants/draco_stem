@@ -1,1 +1,0 @@
-from openalea.cellcomplex.property_topomesh.utils.tissue_analysis_tools import *

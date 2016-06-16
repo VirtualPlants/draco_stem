@@ -22,7 +22,7 @@ from scipy import ndimage as nd
 from scipy.cluster.vq import vq
 
 from openalea.container import array_dict, PropertyTopomesh
-from openalea.cellcomplex.property_topomesh.utils.array_tools import array_unique
+from openalea.mesh.utils.array_tools import array_unique
 
 from time import time
 
@@ -79,9 +79,9 @@ def triangle_topomesh(triangles, positions, **kwargs):
     triangles = np.array(triangles)
     positions = array_dict(positions)
 
-    edges = array_unique(np.sort(np.concatenate(triangles[:,triangle_edge_list],axis=0)))
+    edges = array_unique(np.concatenate(triangles[:,triangle_edge_list],axis=0))
 
-    triangle_edges = np.sort(np.concatenate(triangles[:,triangle_edge_list]))
+    triangle_edges = np.concatenate(triangles[:,triangle_edge_list])
 
     start_time = time()
     print "--> Generating triangle topomesh"

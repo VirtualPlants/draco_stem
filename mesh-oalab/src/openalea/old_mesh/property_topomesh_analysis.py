@@ -25,47 +25,22 @@ from array                                  import array
 
 from openalea.container                     import PropertyTopomesh, array_dict
 
-from copy                                   import copy, deepcopy
+from copy                                   import copy
 from time                                   import time
 import os
 import sys
 import pickle
 
-def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,normal_method="density",object_positions=None,object_radius=10.,verbose=False):
-    """Compute a property of a PropertyTopomesh
-
-    The function compute and fills a property of a PropertyTopomesh passed as argument. The given
-    property is computed for all elements of the specified degree and stored as a dictionary in
-    the PropertyTopomesh structure
-
-    :Parameters:
-        - 'topomesh' (PropertyTopomesh) - the structure on which to compute the property
-        - 'property_name' (string) - the name of the property to compute, among the following ones:
-            * 'barycenter' (degree : [0, 1, 2, 3]) : the position of the center of the element
-            * 'vertices' (degree : [0, 1, 2, 3])
-            * 'triangles' (degree : [0, 1, 2, 3])
-            * 'cells' (degree : [0, 1, 2, 3])
-            * 'length' (degree : [1])
-            * 'area' (degree : [2])
-            * 'volume' (degree : [3])
-            * 'normal' (degree : [0, 2])
-        - 'degree' (int) - the degree of the elements on which to compute the property
-        - 'positions' (dict) - [optional] a position dictionary if ('barycenter',0) is empty
-        - 'object_positions' (dict) - [optional] position of the object(s) reprensented by the mesh
-            * used only for property ('normal',2)
-        - 'object_radius' (float) - [optional] radius of the object(s) represented by the mesh
-            * used only for property ('normal',2)
-
-        :Returns:
-            None - PropertyTopomesh passed as argument is updated
+def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,**kwargs):
+    """
+    Compute a property of a PropertyTopomesh
     """
 
     if positions is None:
         positions = topomesh.wisp_property('barycenter',degree=0)
 
     start_time = time()
-    if verbose:
-        print "--> Computing ",property_name," property (",degree,")"
+    print "--> Computing ",property_name," property (",degree,")"
 
     if property_name == 'barycenter':
         if not isinstance(positions,array_dict):
@@ -232,7 +207,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
             for c,cid in enumerate(topomesh.wisps(3)):
 
                 cell_fids = np.array(list(topomesh.borders(3,cid)))
-                # print cell_fids
+                print cell_fids
 
                 cell_fid_normals = topomesh.wisp_property('normal',2).values(cell_fids)
                 cell_fid_barycenters = topomesh.wisp_property('barycenter',2).values(cell_fids)
@@ -267,7 +242,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
 
                 # print oriented_cell_fid_orientations
                 # print next_fid_queue
-                # print len(oriented_cell_fid_orientations.keys())," / ",len(cell_fids)," [",len(next_fid_queue),"]"
+                print len(oriented_cell_fid_orientations.keys())," / ",len(cell_fids)," [",len(next_fid_queue),"]"
                 # raw_input()
 
                 while len(oriented_cell_fid_orientations.keys()) < len(cell_fids):
@@ -281,10 +256,10 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
                         current_fid_orientation = oriented_cell_fid_orientations[current_fid]
                         next_face_eid_orientations = array_dict(*topomesh.wisp_property('oriented_borders',2)[next_fid][::-1])
 
-                        # print list(topomesh.borders(2,current_fid))
-                        # print current_face_eid_orientations
-                        # print list(topomesh.borders(2,next_fid))
-                        # print next_face_eid_orientations
+                        print list(topomesh.borders(2,current_fid))
+                        print current_face_eid_orientations
+                        print list(topomesh.borders(2,next_fid))
+                        print next_face_eid_orientations
                         
                         next_fid_orientation = - current_face_eid_orientations[transition_eid]*current_fid_orientation*next_face_eid_orientations[transition_eid]
                         oriented_cell_fid_orientations[next_fid] = next_fid_orientation
@@ -304,7 +279,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
 
                         # print oriented_cell_fid_orientations
                         # next_fid_queue
-                        # print "Cell ",cid," : ", len(oriented_cell_fid_orientations.keys())," / ",len(cell_fids)," [",len(next_fid_queue),"]"
+                        print "Cell ",cid," : ", len(oriented_cell_fid_orientations.keys())," / ",len(cell_fids)," [",len(next_fid_queue),"]"
                         # raw_input()
 
                     if len(oriented_cell_fid_orientations.keys()) < len(cell_fids):
@@ -326,7 +301,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
                         
                         # print oriented_cell_fid_orientations
                         # print next_fid_queue
-                        # print len(oriented_cell_fid_orientations.keys())," / ",len(cell_fids)," [",len(next_fid_queue),"]"
+                        print len(oriented_cell_fid_orientations.keys())," / ",len(cell_fids)," [",len(next_fid_queue),"]"
                         # raw_input()
 
                 # oriented_cell_fids = [cell_fids[0]]
@@ -689,7 +664,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
         triangle_sinuses[:,1] = np.power(np.array(1.0 - np.power((triangle_edge_lengths[:,0]**2+triangle_edge_lengths[:,1]**2-triangle_edge_lengths[:,2]**2)/(2.0*triangle_edge_lengths[:,0]*triangle_edge_lengths[:,1]),2.0),np.float16),0.5)
         triangle_sinuses[:,2] = np.power(np.array(1.0 - np.power((triangle_edge_lengths[:,2]**2+triangle_edge_lengths[:,0]**2-triangle_edge_lengths[:,1]**2)/(2.0*triangle_edge_lengths[:,2]*triangle_edge_lengths[:,0]),2.0),np.float16),0.5)
 
-        triangle_sinus_eccentricities = 1.0 - (2.0*(triangle_sinuses[:,0]+triangle_sinuses[:,1]+triangle_sinuses[:,2]))/(3.*np.sqrt(3.))
+        triangle_sinus_eccentricities = 1.0 - (2.0*(triangle_sinuses[:,0]+triangle_sinuses[:,1]+triangle_sinuses[:,2]))/(3*np.sqrt(3))
         topomesh.update_wisp_property('eccentricity',degree=degree,values=triangle_sinus_eccentricities,keys=np.array(list(topomesh.wisps(degree))))
 
     if property_name == 'normal':
@@ -704,64 +679,24 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
                 compute_topomesh_property(topomesh,'barycenter',2)
             if not topomesh.has_wisp_property('barycenter',degree=3,is_computed=True):
                 compute_topomesh_property(topomesh,'barycenter',3)
+            vertices_positions = positions.values(topomesh.wisp_property('vertices',degree).values(list(topomesh.wisps(degree))))
+
+            normal_vectors = np.cross(vertices_positions[:,1]-vertices_positions[:,0],vertices_positions[:,2]-vertices_positions[:,0])
             
-
-            if normal_method == "orientation":
-                normal_cell = max(topomesh.wisps(3))+1
-                topomesh.add_wisp(3,normal_cell)
-                for t in topomesh.wisps(2):
-                    topomesh.link(3,normal_cell,t)
-
-                compute_topomesh_property(topomesh,'oriented_borders',2)
-                compute_topomesh_property(topomesh,'oriented_borders',3)
-
-                triangle_orientations = array_dict(topomesh.wisp_property('oriented_borders',3)[normal_cell][1],topomesh.wisp_property('oriented_borders',3)[normal_cell][0])
-                topomesh.update_wisp_property('orientation',2,triangle_orientations.values(list(topomesh.wisps(2))),list(topomesh.wisps(2)))
-                
-                topomesh.remove_wisp(3,normal_cell)
-
-                compute_topomesh_property(topomesh,'vertices',2)
-
-                compute_topomesh_property(topomesh,'oriented_vertices',2)
-                vertices_positions = topomesh.wisp_property('barycenter',0).values(topomesh.wisp_property('oriented_vertices',2).values())
-                normal_vectors = np.cross(vertices_positions[:,1]-vertices_positions[:,0],vertices_positions[:,2]-vertices_positions[:,0])
-                normal_norms = np.linalg.norm(normal_vectors,axis=1)
-                normal_orientations = topomesh.wisp_property('orientation',2).values()
-
-                face_vectors = vertices_positions.mean(axis=1) - topomesh.wisp_property('barycenter',0).values().mean(axis=0)
-                global_normal_orientation = np.sign(np.einsum("...ij,...ij->...i",normal_orientations[:,np.newaxis]*normal_vectors,face_vectors).mean())
-                topomesh.update_wisp_property('normal',2,global_normal_orientation*normal_orientations[:,np.newaxis]*normal_vectors/normal_norms[:,np.newaxis],list(topomesh.wisps(2)))
-
-            elif normal_method == "density":
-                vertices_positions = positions.values(topomesh.wisp_property('vertices',degree).values(list(topomesh.wisps(degree))))
-                normal_vectors = np.cross(vertices_positions[:,1]-vertices_positions[:,0],vertices_positions[:,2]-vertices_positions[:,0])
-                
-                # reversed_normals = np.where(normal_vectors[:,2] < 0)[0]
+            # reversed_normals = np.where(normal_vectors[:,2] < 0)[0]
             
-                from openalea.cellcomplex.property_topomesh.utils.implicit_surfaces import point_spherical_density
-                if object_positions is None:
-                    object_positions = topomesh.wisp_property('barycenter',3)
-                triangle_epidermis = topomesh.wisp_property('epidermis',2).values()
+            from openalea.mesh.utils.implicit_surfaces import point_spherical_density
+            object_positions = kwargs.get('object_positions',topomesh.wisp_property('barycenter',3))
+            object_radius = kwargs.get('object_radius',10.)
+            triangle_epidermis = topomesh.wisp_property('epidermis',2).values()
 
-                triangle_exterior_density = point_spherical_density(object_positions,topomesh.wisp_property('barycenter',2).values()[triangle_epidermis]+normal_vectors[triangle_epidermis],sphere_radius=object_radius,k=0.5)
-                triangle_interior_density = point_spherical_density(object_positions,topomesh.wisp_property('barycenter',2).values()[triangle_epidermis]-normal_vectors[triangle_epidermis],sphere_radius=object_radius,k=0.5)
-                normal_orientation = 2*(triangle_exterior_density<triangle_interior_density)-1
-                normal_vectors[triangle_epidermis] = normal_orientation[...,np.newaxis]*normal_vectors[triangle_epidermis]
-                normal_norms = np.linalg.norm(normal_vectors,axis=1)
-                # normal_norms[np.where(normal_norms==0)] = 0.001
-                topomesh.update_wisp_property('normal',degree=degree,values=normal_vectors/normal_norms[:,np.newaxis],keys=np.array(list(topomesh.wisps(degree))))
-
-            elif normal_method == "barycenter":
-                vertices_positions = positions.values(topomesh.wisp_property('vertices',degree).values(list(topomesh.wisps(degree))))
-                normal_vectors = np.cross(vertices_positions[:,1]-vertices_positions[:,0],vertices_positions[:,2]-vertices_positions[:,0])
-
-                barycenter_vectors = topomesh.wisp_property('barycenter',2).values() - positions.values().mean(axis=0)
-                normal_orientation = np.sign(np.einsum("...ij,...ij->...i",normal_vectors,barycenter_vectors))
-                normal_vectors = normal_orientation[...,np.newaxis]*normal_vectors
-                normal_norms = np.linalg.norm(normal_vectors,axis=1)
-
-                topomesh.update_wisp_property('normal',degree=degree,values=normal_vectors/normal_norms[:,np.newaxis],keys=np.array(list(topomesh.wisps(degree))))
-
+            triangle_exterior_density = point_spherical_density(object_positions,topomesh.wisp_property('barycenter',2).values()[triangle_epidermis]+normal_vectors[triangle_epidermis],sphere_radius=object_radius,k=0.5)
+            triangle_interior_density = point_spherical_density(object_positions,topomesh.wisp_property('barycenter',2).values()[triangle_epidermis]-normal_vectors[triangle_epidermis],sphere_radius=object_radius,k=0.5)
+            normal_orientation = 2*(triangle_exterior_density<triangle_interior_density)-1
+            normal_vectors[triangle_epidermis] = normal_orientation[...,np.newaxis]*normal_vectors[triangle_epidermis]
+            normal_norms = np.linalg.norm(normal_vectors,axis=1)
+            # normal_norms[np.where(normal_norms==0)] = 0.001
+            topomesh.update_wisp_property('normal',degree=degree,values=normal_vectors/normal_norms[:,np.newaxis],keys=np.array(list(topomesh.wisps(degree))))
         
 
         elif degree == 0:
@@ -775,7 +710,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
                 compute_topomesh_property(topomesh,'epidermis',degree=2)
 
             epidermis_triangles = np.array(list(topomesh.wisps(2)))[topomesh.wisp_property('epidermis',2).values(list(topomesh.wisps(2)))]
-            # print epidermis_triangles
+            print epidermis_triangles
 
             #triangle_vertices = topomesh.wisp_property('vertices',degree=2).values(list(topomesh.wisps(2)))
             triangle_vertices = topomesh.wisp_property('vertices',degree=2).values(epidermis_triangles)
@@ -830,12 +765,12 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
         triangle_sinuses[:,1] = np.sqrt(1.0 - np.power((triangle_edge_lengths[:,0]**2+triangle_edge_lengths[:,1]**2-triangle_edge_lengths[:,2]**2)/(2.0*triangle_edge_lengths[:,0]*triangle_edge_lengths[:,1]),2.0))
         triangle_sinuses[:,2] = np.sqrt(1.0 - np.power((triangle_edge_lengths[:,2]**2+triangle_edge_lengths[:,0]**2-triangle_edge_lengths[:,1]**2)/(2.0*triangle_edge_lengths[:,2]*triangle_edge_lengths[:,0]),2.0))
 
-        # print triangle_sinuses.shape
-        # print triangle_vertices.shape
+        print triangle_sinuses.shape
+        print triangle_vertices.shape
 
         triangle_centers = ((topomesh.wisp_property('barycenter',degree=0).values(triangle_vertices)/triangle_sinuses[...,np.newaxis]).sum(axis=1))/((1./triangle_sinuses).sum(axis=1)[...,np.newaxis])
         # print triangle_centers
-        # print triangle_centers.shape
+        print triangle_centers.shape
         topomesh.update_wisp_property('incircle center',degree=degree,values=triangle_centers,keys=np.array(list(topomesh.wisps(degree))))
 
     if property_name == 'volume':
@@ -1035,8 +970,8 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
 
             try:
                 vertex_curvature_matrix_eigenvalues, vertex_curvature_matrix_eigenvectors = np.linalg.eig(vertex_curvature_matrix)
-            except np.linalg.LinAlgError:
-            #except LinAlgError:
+            #except np.linalg.LinAlgError:
+            except LinAlgError:
                 ok_curvature_matrix = np.unique(np.where(1-np.isnan(vertex_curvature_matrix))[0])
                 nan_curvature_matrix = np.unique(np.where(np.isnan(vertex_curvature_matrix))[0])
                 vertex_curvature_matrix_trunc = np.delete(vertex_curvature_matrix,nan_curvature_matrix)
@@ -1063,25 +998,26 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
             topomesh.update_wisp_property('gaussian_curvature',0,topomesh.wisp_property('principal_curvature_max',0).values(list(topomesh.wisps(0)))*topomesh.wisp_property('principal_curvature_min',0).values(list(topomesh.wisps(0))),np.array(list(topomesh.wisps(0))))
         
         elif degree == 2:
-            # if not topomesh.has_wisp_property('principal_curvature_tensor',degree=0,is_computed=True):
-            #     compute_topomesh_property(topomesh,'principal_curvature_tensor',degree=0)
-            # if not topomesh.has_wisp_property('epidermis',degree=2,is_computed=True):
-            #     compute_topomesh_property(topomesh,'epidermis',2)
-            # if not topomesh.has_wisp_property('vertices',degree=2,is_computed=True):
-            #     compute_topomesh_property(topomesh,'vertices',2)
+            if not topomesh.has_wisp_property('principal_curvature_tensor',degree=0,is_computed=True):
+                compute_topomesh_property(topomesh,'principal_curvature_tensor',degree=0)
+            if not topomesh.has_wisp_property('epidermis',degree=2,is_computed=True):
+                compute_topomesh_property(topomesh,'epidermis',2)
+            if not topomesh.has_wisp_property('vertices',degree=2,is_computed=True):
+                compute_topomesh_property(topomesh,'vertices',2)
 
-            # epidermis_triangles = np.array(list(topomesh.wisps(2)))[topomesh.wisp_property('epidermis',2).values(list(topomesh.wisps(2)))]
-            # triangle_vertices = topomesh.wisp_property('vertices',degree=2).values(epidermis_triangles)
+            epidermis_triangles = np.array(list(topomesh.wisps(2)))[topomesh.wisp_property('epidermis',2).values(list(topomesh.wisps(2)))]
+            triangle_vertices = topomesh.wisp_property('vertices',degree=2).values(epidermis_triangles)
 
-            # triangle_curvature_tensor = array_dict(topomesh.wisp_property('principal_curvature_tensor',degree=0).values(triangle_vertices).mean(axis=1),epidermis_triangles)
-            # topomesh.update_wisp_property('principal_curvature_tensor',2,np.array([triangle_curvature_tensor[t] if t in epidermis_triangles else np.zeros((3,3),float) for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
-            # for direction in ['principal_direction_min','principal_direction_max']:
-            #     triangle_direction = array_dict(topomesh.wisp_property(direction,degree=0).values(triangle_vertices).mean(axis=1),epidermis_triangles)
-            #     topomesh.update_wisp_property(direction,2,np.array([triangle_direction[t] if t in epidermis_triangles else np.array([0.,0.,0.]) for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
-            # for curvature in ['principal_curvature_min','principal_curvature_max','mean_curvature','gaussian_curvature']:
-            #     triangle_curvature = array_dict(topomesh.wisp_property(curvature,degree=0).values(triangle_vertices).mean(axis=1),epidermis_triangles)
-            #     topomesh.update_wisp_property(curvature,2,np.array([triangle_curvature[t] if t in epidermis_triangles else 0. for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
+            triangle_curvature_tensor = array_dict(topomesh.wisp_property('principal_curvature_tensor',degree=0).values(triangle_vertices).mean(axis=1),epidermis_triangles)
+            topomesh.update_wisp_property('principal_curvature_tensor',2,np.array([triangle_curvature_tensor[t] if t in epidermis_triangles else np.zeros((3,3),float) for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
+            for direction in ['principal_direction_min','principal_direction_max']:
+                triangle_direction = array_dict(topomesh.wisp_property(direction,degree=0).values(triangle_vertices).mean(axis=1),epidermis_triangles)
+                topomesh.update_wisp_property(direction,2,np.array([triangle_direction[t] if t in epidermis_triangles else np.array([0.,0.,0.]) for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
+            for curvature in ['principal_curvature_min','principal_curvature_max','mean_curvature','gaussian_curvature']:
+                triangle_curvature = array_dict(topomesh.wisp_property(curvature,degree=0).values(triangle_vertices).mean(axis=1),epidermis_triangles)
+                topomesh.update_wisp_property(curvature,2,np.array([triangle_curvature[t] if t in epidermis_triangles else 0. for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
         
+
             if not topomesh.has_wisp_property('barycenter',degree=2,is_computed=True):
                 compute_topomesh_property(topomesh,'barycenter',degree=2)
             if not topomesh.has_wisp_property('normal',degree=2,is_computed=True):
@@ -1091,81 +1027,10 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
             if not topomesh.has_wisp_property('normal',degree=0,is_computed=True):
                 compute_topomesh_property(topomesh,'normal',degree=0)
 
-            epidermis_triangles = np.array(list(topomesh.wisps(2)))[topomesh.wisp_property('epidermis',2).values(list(topomesh.wisps(2))).astype(bool)]
+            epidermis_triangles = np.array(list(topomesh.wisps(2)))[topomesh.wisp_property('epidermis',2).values(list(topomesh.wisps(2)))]
             triangle_vertices = topomesh.wisp_property('vertices',degree=2).values(epidermis_triangles)
 
-            triangle_edge_list  = np.array([[1, 2],[0, 2],[0, 1]])
-            triangle_edge_vertices = triangle_vertices[:,triangle_edge_list]
-            triangle_edge_points = positions.values(triangle_edge_vertices)
-            triangle_edge_vectors = triangle_edge_points[:,:,1]-triangle_edge_points[:,:,0]
 
-            triangle_vertex_normals = topomesh.wisp_property('normal',0).values(triangle_vertices)
-            triangle_barycenter_normals = triangle_vertex_normals.mean(axis=1)
-            #triangle_barycenter_normals = triangle_barycenter_normals/np.linalg.norm(triangle_barycenter_normals,axis=1)[:,np.newaxis]
-
-            triangle_barycenter_normal_derivatives = triangle_vertex_normals[:,triangle_edge_list] 
-            triangle_barycenter_normal_derivatives = triangle_barycenter_normal_derivatives[:,:,1] - triangle_barycenter_normal_derivatives[:,:,0]
-            triangle_barycenter_normal_derivatives = triangle_barycenter_normal_derivatives/np.linalg.norm(triangle_barycenter_normals,axis=1)[:,np.newaxis,np.newaxis]
-
-            triangle_barycenter_derivatives_projectors = np.transpose([np.einsum("...ij,...ij->...i",triangle_barycenter_normals,triangle_edge_vectors[:,k])[:,np.newaxis]*triangle_barycenter_normals for k in xrange(3)],(1,0,2))
-            triangle_projected_barycenter_derivatives = triangle_edge_vectors - triangle_barycenter_derivatives_projectors
-
-            E = np.einsum("...ij,...ij->...i",triangle_projected_barycenter_derivatives[:,1],triangle_projected_barycenter_derivatives[:,1])
-            F = np.einsum("...ij,...ij->...i",triangle_projected_barycenter_derivatives[:,1],triangle_projected_barycenter_derivatives[:,2])
-            G = np.einsum("...ij,...ij->...i",triangle_projected_barycenter_derivatives[:,2],triangle_projected_barycenter_derivatives[:,2])
-
-            L = -np.einsum("...ij,...ij->...i",triangle_barycenter_normal_derivatives[:,1],triangle_projected_barycenter_derivatives[:,1])
-            M1 = -np.einsum("...ij,...ij->...i",triangle_barycenter_normal_derivatives[:,1],triangle_projected_barycenter_derivatives[:,2])
-            M2 = -np.einsum("...ij,...ij->...i",triangle_barycenter_normal_derivatives[:,2],triangle_projected_barycenter_derivatives[:,1])
-            N = -np.einsum("...ij,...ij->...i",triangle_barycenter_normal_derivatives[:,2],triangle_projected_barycenter_derivatives[:,2])
-
-            weingarten_curvature_matrix = np.zeros((len(epidermis_triangles),2,2))
-            weingarten_curvature_matrix[:,0,0] = (L*G-M1*F)/(E*G-F*F)
-            weingarten_curvature_matrix[:,0,1] = (M2*G-N*F)/(E*G-F*F)
-            # weingarten_curvature_matrix[:,0,1] = (M1*E-L*F)/(E*G-F*F)
-            weingarten_curvature_matrix[:,1,0] = (M1*E-L*F)/(E*G-F*F)
-            # weingarten_curvature_matrix[:,1,0] = (M2*G-N*F)/(E*G-F*F)
-            weingarten_curvature_matrix[:,1,1] = (N*E-M2*F)/(E*G-F*F)
-
-            weingarten_curvature_matrix_eigenvalues, weingarten_curvature_matrix_eigenvectors = np.linalg.eig(weingarten_curvature_matrix)
-
-            weingarten_curvature_matrix_eigenvalues = -weingarten_curvature_matrix_eigenvalues
-            weingarten_curvature_matrix_eigenvectors = np.transpose(weingarten_curvature_matrix_eigenvectors,(0,2,1))
-
-            weingarten_principal_curvature_min = weingarten_curvature_matrix_eigenvalues[tuple([np.arange(len(epidermis_triangles)),np.argsort(np.abs(weingarten_curvature_matrix_eigenvalues))[:,0]])].astype(float)
-            weingarten_principal_curvature_max = weingarten_curvature_matrix_eigenvalues[tuple([np.arange(len(epidermis_triangles)),np.argsort(np.abs(weingarten_curvature_matrix_eigenvalues))[:,1]])].astype(float)
-
-            weingarten_principal_vector_min = weingarten_curvature_matrix_eigenvectors[tuple([np.arange(len(epidermis_triangles)),np.argsort(np.abs(weingarten_curvature_matrix_eigenvalues))[:,0]])].astype(float)
-            weingarten_principal_vector_max = weingarten_curvature_matrix_eigenvectors[tuple([np.arange(len(epidermis_triangles)),np.argsort(np.abs(weingarten_curvature_matrix_eigenvalues))[:,1]])].astype(float)
-
-            weingarten_principal_direction_min = array_dict((weingarten_principal_vector_min[:,:,np.newaxis]*triangle_projected_barycenter_derivatives[:,1:3]).sum(axis=1),epidermis_triangles)
-            weingarten_principal_direction_max = array_dict((weingarten_principal_vector_max[:,:,np.newaxis]*triangle_projected_barycenter_derivatives[:,1:3]).sum(axis=1),epidermis_triangles)
-
-            P = np.transpose([weingarten_principal_direction_max.values(), weingarten_principal_direction_min.values(), triangle_barycenter_normals],(1,2,0))
-            D = np.array([np.diag(d) for d in np.transpose([weingarten_principal_curvature_max, weingarten_principal_curvature_min, np.zeros_like(epidermis_triangles)])])
-            P_i = np.array([np.linalg.pinv(p) for p in P])
-
-            face_curvature_tensor = np.einsum('...ij,...jk->...ik',P,np.einsum('...ij,...jk->...ik',D,P_i))
-            face_curvature_matrix_eigenvalues, face_curvature_matrix_eigenvectors = np.linalg.eig(face_curvature_tensor)
-
-            face_principal_curvature_min = array_dict(face_curvature_matrix_eigenvalues[tuple([np.arange(len(epidermis_triangles)),np.argsort(np.abs(face_curvature_matrix_eigenvalues))[:,1]])].astype(float),epidermis_triangles)
-            face_principal_curvature_max = array_dict(face_curvature_matrix_eigenvalues[tuple([np.arange(len(epidermis_triangles)),np.argsort(np.abs(face_curvature_matrix_eigenvalues))[:,2]])].astype(float),epidermis_triangles)
-
-            # face_curvature_matrix_eigenvectors = np.transpose(face_curvature_matrix_eigenvectors,(0,2,1))
-            face_curvature_matrix_eigenvectors = np.transpose(face_curvature_matrix_eigenvectors,(0,1,2))
-            face_principal_direction_min = array_dict(face_curvature_matrix_eigenvectors[tuple([np.arange(len(epidermis_triangles)),np.argsort(np.abs(face_curvature_matrix_eigenvalues))[:,1]])].astype(float),epidermis_triangles)
-            face_principal_direction_max = array_dict(face_curvature_matrix_eigenvectors[tuple([np.arange(len(epidermis_triangles)),np.argsort(np.abs(face_curvature_matrix_eigenvalues))[:,2]])].astype(float),epidermis_triangles)
-
-            face_principal_curvature_tensor = array_dict(face_curvature_tensor,epidermis_triangles)
-            topomesh.update_wisp_property('principal_curvature_tensor',2,np.array([face_principal_curvature_tensor[t] if t in epidermis_triangles else np.zeros((3,3)) for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
-            
-            topomesh.update_wisp_property('principal_direction_min',2,np.array([face_principal_direction_min[t] if t in epidermis_triangles else np.zeros(3) for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
-            topomesh.update_wisp_property('principal_direction_max',2,np.array([face_principal_direction_max[t] if t in epidermis_triangles else np.zeros(3) for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
-
-            topomesh.update_wisp_property('principal_curvature_min',2,np.array([face_principal_curvature_min[t] if t in epidermis_triangles else 0. for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
-            topomesh.update_wisp_property('principal_curvature_max',2,np.array([face_principal_curvature_max[t] if t in epidermis_triangles else 0. for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
-            topomesh.update_wisp_property('mean_curvature',2,np.array([(face_principal_curvature_min[t] + face_principal_curvature_max[t])/2. if t in epidermis_triangles else 0. for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
-            topomesh.update_wisp_property('gaussian_curvature',2,np.array([(face_principal_curvature_min[t]*face_principal_curvature_max[t]) if t in epidermis_triangles else 0. for t in topomesh.wisps(2)]),np.array(list(topomesh.wisps(2))))
 
 
         elif degree == 3:
@@ -1237,9 +1102,7 @@ def compute_topomesh_property(topomesh,property_name,degree=0,positions=None,nor
         topomesh.update_interface_property('interface',degree=degree,values=np.linalg.norm(neighbour_vectors,axis=1),keys=np.array(list(topomesh.interfaces(degree))))
 
     end_time = time()
-    if verbose:
-        print "<-- Computing",property_name,"property (",degree,") [",end_time-start_time,"s]"
-
+    print "<-- Computing",property_name,"property (",degree,") [",end_time-start_time,"s]"
 
 def compute_topomesh_triangle_properties(topomesh,positions=None):
     """todo"""
@@ -1282,7 +1145,6 @@ def compute_topomesh_triangle_properties(topomesh,positions=None):
     end_time = time()
     print "<-- Computing triangle properties    [",end_time-start_time,"s]"
 
-
 def compute_topomesh_vertex_property_from_faces(topomesh,property_name,weighting='area',adjacency_sigma=0.5,neighborhood=1):
     """
     """
@@ -1302,13 +1164,13 @@ def compute_topomesh_vertex_property_from_faces(topomesh,property_name,weighting
     assert not face_property.values().dtype == np.object
 
     if neighborhood == 1:
-        vertex_faces = np.concatenate([list(topomesh.regions(0,v,2)) for v in topomesh.wisps(0)]).astype(np.uint16)
-        vertex_face_vertices = np.concatenate([v*np.ones_like(list(topomesh.regions(0,v,2))) for v in topomesh.wisps(0)]).astype(np.uint16)
+        vertex_faces = np.concatenate([list(topomesh.regions(0,v,2)) for v in topomesh.wisps(0)])
+        vertex_face_vertices = np.concatenate([v*np.ones_like(list(topomesh.regions(0,v,2))) for v in topomesh.wisps(0)])
     else:
         vertex_face_adjacency_matrix = topomesh.nb_wisps(2)*np.ones((max(topomesh.wisps(0))+1,max(topomesh.wisps(2))+1))
 
-        vertex_faces = np.concatenate([list(topomesh.regions(0,v,2)) for v in topomesh.wisps(0)]).astype(np.uint16)
-        vertex_face_vertices = np.concatenate([v*np.ones_like(list(topomesh.regions(0,v,2))) for v in topomesh.wisps(0)]).astype(np.uint16)
+        vertex_faces = np.concatenate([list(topomesh.regions(0,v,2)) for v in topomesh.wisps(0)])
+        vertex_face_vertices = np.concatenate([v*np.ones_like(list(topomesh.regions(0,v,2))) for v in topomesh.wisps(0)])
     
         compute_topomesh_property(topomesh,'border_neighbors',2)
 
@@ -1365,53 +1227,165 @@ def compute_topomesh_vertex_property_from_faces(topomesh,property_name,weighting
         vertex_property = nd.sum(vertex_face_weight*vertex_face_property,vertex_face_vertices,index=list(topomesh.wisps(0)))/nd.sum(vertex_face_weight,vertex_face_vertices,index=list(topomesh.wisps(0)))
     elif vertex_face_property.ndim == 2:
         vertex_property = np.transpose([nd.sum(vertex_face_weight*vertex_face_property[:,k],vertex_face_vertices,index=list(topomesh.wisps(0)))/nd.sum(vertex_face_weight,vertex_face_vertices,index=list(topomesh.wisps(0))) for k in xrange(vertex_face_property.shape[1])])
-    elif vertex_face_property.ndim == 3:
-        vertex_property = np.transpose([[nd.sum(vertex_face_weight*vertex_face_property[:,j,k],vertex_face_vertices,index=list(topomesh.wisps(0)))/nd.sum(vertex_face_weight,vertex_face_vertices,index=list(topomesh.wisps(0))) for k in xrange(vertex_face_property.shape[2])] for j in xrange(vertex_face_property.shape[1])])
-
-    if property_name in ['normal']:
-        vertex_property_norm = np.linalg.norm(vertex_property,axis=1)
-        vertex_property = vertex_property/vertex_property_norm[:,np.newaxis]
-    vertex_property[np.isnan(vertex_property)] = 0
 
     topomesh.update_wisp_property(property_name,degree=0,values=array_dict(vertex_property,keys=list(topomesh.wisps(0))))
     
     end_time = time()
     print "<-- Computing vertex property from faces [",end_time-start_time,"s]"
 
-def compute_topomesh_cell_property_from_faces(topomesh,property_name,weighting='area'):
-    """
-    """
+
+
+def spatial_image_from_topomesh(topomesh,shape,offset=np.array([0.,0.,0.]),scale=1.0):
+    """"todo"""
+
     start_time = time()
-    print "--> Computing cell property from faces"
+    print "--> Drawing topomesh image"
 
-    assert topomesh.has_wisp_property(property_name,2,is_computed=True)
-    assert weighting in ['uniform','area']
+    if not topomesh.has_wisp_property('barycenter',degree=3,is_computed=True):
+        compute_topomesh_property(topomesh,'barycenter',degree=3)
+    if not topomesh.has_wisp_property('borders',degree=3,is_computed=True):
+        compute_topomesh_property(topomesh,'borders',degree=3)
+    if not topomesh.has_wisp_property('vertices',degree=2,is_computed=True):
+        compute_topomesh_property(topomesh,'vertices',degree=2)
 
-    face_property = topomesh.wisp_property(property_name,2)
+    if not topomesh.has_wisp_property('label',degree=3,is_computed=False):
+        topomesh.add_wisp_property('label',degree=3)
+    if not topomesh.has_wisp_property('label',degree=3,is_computed=True):
+        topomesh.update_wisp_property('label',degree=3,values=np.array(list(topomesh.wisps(3)))+1)
 
-    cell_faces = np.concatenate([list(topomesh.borders(3,c)) for c in topomesh.wisps(3)]).astype(np.uint16)
-    cell_face_cells = np.concatenate([c*np.ones(topomesh.nb_borders(3,c)) for c in topomesh.wisps(3)]).astype(np.uint16)
+    shape = tuple(np.array(shape)*scale)
+    topomesh_img = np.ones(shape,np.uint16)
 
-    if weighting == 'uniform':
-        cell_face_weight = np.ones_like(cell_faces)
-    elif weighting == 'area':
-        compute_topomesh_property(topomesh,'area',2)
-        cell_face_weight = topomesh.wisp_property('area',2).values(cell_faces)
+    # image_start_time = time()
+    # print "  --> Generating coordinates ",shape
+    # coords = np.mgrid[0:shape[0],0:shape[1],0:shape[2]]
+    # coords = np.rollaxis(np.rollaxis(np.rollaxis(coords,3),3),3)/scale - offset
+    # image_end_time = time()
+    # print "  <-- Generating coordinates [",image_end_time-image_start_time,"s]"
 
-    cell_face_property = face_property.values(cell_faces)
+    image_start_time = time()
+    print "  --> Computing tetrahedra "
+    cell_triangles = np.array(np.concatenate(topomesh.wisp_property('borders',degree=3).values()),int)
+    cell_tetrahedra_cells = np.array(np.concatenate([[c for t in topomesh.wisp_property('borders',degree=3)[c]] for c in topomesh.wisps(3)]),int)
+    cell_tetrahedra_labels = topomesh.wisp_property('label',degree=3).values(cell_tetrahedra_cells)
+    cell_triangle_vertices = topomesh.wisp_property('vertices',degree=2).values(cell_triangles)
+    cell_tetrahedra = np.concatenate([topomesh.wisp_property('barycenter',degree=3).values(cell_tetrahedra_cells)[:,np.newaxis], topomesh.wisp_property('barycenter',degree=0).values(cell_triangle_vertices)],axis=1)
+    image_end_time = time()
+    print "  <-- Computing tetrahedra (",cell_tetrahedra_cells.shape[0],") [",image_end_time-image_start_time,"s]"
 
-    if cell_face_property.ndim == 1:
-        cell_property = nd.sum(cell_face_weight*cell_face_property,cell_face_cells,index=list(topomesh.wisps(3)))/nd.sum(cell_face_weight,cell_face_cells,index=list(topomesh.wisps(3)))
-    elif cell_face_property.ndim == 2:
-        cell_property = np.transpose([nd.sum(cell_face_weight*cell_face_property[:,k],cell_face_cells,index=list(topomesh.wisps(3)))/nd.sum(cell_face_weight,cell_face_cells,index=list(topomesh.wisps(3))) for k in xrange(cell_face_property.shape[1])])
-    elif cell_face_property.ndim == 3:
-        cell_property = np.transpose([[nd.sum(cell_face_weight*cell_face_property[:,j,k],cell_face_cells,index=list(topomesh.wisps(3)))/nd.sum(cell_face_weight,cell_face_cells,index=list(topomesh.wisps(3))) for k in xrange(cell_face_property.shape[2])] for j in xrange(cell_face_property.shape[1])])
+    image_start_time = time()
+    print "  --> Inverting matrices"
+    cell_tetra_matrix = np.transpose(np.array([cell_tetrahedra[:,1],cell_tetrahedra[:,2],cell_tetrahedra[:,3]]) - cell_tetrahedra[:,0],axes=(1,2,0))
+    cell_tetra_inv_matrix = np.linalg.inv(cell_tetra_matrix)
+    image_end_time = time()
+    print "  <-- Inverting matrices     [",image_end_time-image_start_time,"s]"
 
-    topomesh.update_wisp_property(property_name,degree=3,values=array_dict(cell_property,keys=list(topomesh.wisps(3))))
-    
+    # image_start_time = time()
+    # print "  --> Detecting inner voxels"
+    # xyz = (coords[:,:,:,np.newaxis] - cell_tetrahedra[:,0][np.newaxis,np.newaxis,np.newaxis,:])
+    # lambdas = np.einsum('...ijk,...ik->...ij',cell_tetra_inv_matrix,xyz)
+    # image_end_time = time()
+    # print "  <-- Detecting inner voxels [",image_end_time-image_start_time,"s]"
+
+    # image_start_time = time()
+    # print "  --> Affecting image labels"
+    # voxel_tetrahedra = ((lambdas[...,0]>=0)&(lambdas[...,1]>=0)&(lambdas[...,2]>=0)&(np.sum(lambdas,axis=4)<=1))
+    # topomesh_img = np.array(np.max(voxel_tetrahedra*cell_tetrahedra_labels[np.newaxis,np.newaxis,np.newaxis],axis=3),np.uint16)
+    # image_end_time = time()
+    # print "  <-- Affecting image labels [",image_end_time-image_start_time,"s]"
+
+    image_start_time = time()
+    for t,tetra_label in enumerate(cell_tetrahedra_labels):
+        tetra_vertices = cell_tetrahedra[t]
+
+        coords = (np.mgrid[2.*scale*np.min(tetra_vertices[:,0]-1):2.*scale*np.max(tetra_vertices[:,0]+1),
+                           2.*scale*np.min(tetra_vertices[:,1]-1):2.*scale*np.max(tetra_vertices[:,1]+1),
+                           2.*scale*np.min(tetra_vertices[:,2]-1):2.*scale*np.max(tetra_vertices[:,2]+1)])/(2.*scale)
+        coords = np.transpose(coords,(1,2,3,0))
+
+        xyz = coords - tetra_vertices[0]
+        lambdas = np.einsum('...jk,...k->...j',cell_tetra_inv_matrix[t],xyz)
+
+        # voxel_tetrahedra = ((lambdas[...,0.]>=0)&(lambdas[...,1]>=0.)&(lambdas[...,2]>=0.)&(np.sum(lambdas,axis=3)<=1.))
+        # tetra_where = np.maximum(np.minimum(np.array(scale*(coords+offset),int),np.array(shape,int)-1),0)
+        # topomesh_img[tuple(np.transpose(tetra_where,axes=(3,0,1,2)))] = np.maximum(topomesh_img[tuple(np.transpose(tetra_where,axes=(3,0,1,2)))],np.array(voxel_tetrahedra*cell_tetrahedra_labels[t],np.uint16))
+
+        tetra_where = np.array(scale*(coords[np.where((lambdas[...,0]>=0) & (lambdas[...,1]>=0) & (lambdas[...,2]>=0) & (np.sum(lambdas,axis=3)<=1))]+offset),int)
+        tetra_where = tetra_where[np.where((tetra_where[...,0]>=0)&(tetra_where[...,1]>=0)&(tetra_where[...,2]>=0))]
+        tetra_where = tetra_where[np.where((tetra_where[...,0]<shape[0])&(tetra_where[...,1]<shape[1])&(tetra_where[...,2]<shape[2]))]
+        topomesh_img[tuple(np.transpose(tetra_where))] = tetra_label
+
+        if (t%10000 == 0)&(t>0):
+            image_end_time = time()
+            print "  --> Drawing Tetrahedron ",t,"[",(image_end_time-image_start_time)/10000.,"s]"
+            image_start_time = time()
+
     end_time = time()
-    print "<-- Computing cell property from faces [",end_time-start_time,"s]"
+    print "<-- Drawing topomesh image   [",end_time-start_time,"s]"
 
+    return topomesh_img
+
+def topomesh_line_rasterization(topomesh,shape):
+    """ """
+    start_time = time()
+    print "--> Rasterizing topomesh"
+
+    topomesh_img = np.ones(shape,np.uint16)
+
+    if not topomesh.has_wisp_property('barycenter',degree=3,is_computed=True):
+        compute_topomesh_property(topomesh,'barycenter',degree=3)
+    if not topomesh.has_wisp_property('borders',degree=3,is_computed=True):
+        compute_topomesh_property(topomesh,'borders',degree=3)
+    if not topomesh.has_wisp_property('vertices',degree=2,is_computed=True):
+        compute_topomesh_property(topomesh,'vertices',degree=2)
+
+    if not topomesh.has_wisp_property('label',degree=3,is_computed=False):
+        topomesh.add_wisp_property('label',degree=3)
+    if not topomesh.has_wisp_property('label',degree=3,is_computed=True):
+        topomesh.update_wisp_property('label',degree=3,values=np.array(list(topomesh.wisps(3)))+1)
+
+    for c in topomesh.wisps(3):
+        cell_start_time = time()
+        print "  --> Rasterizing cell",c
+
+        cell_img = np.zeros(shape,np.uint16)
+
+        cell_triangles = topomesh.wisp_property('borders',degree=3)[c]
+        cell_triangle_vertices = topomesh.wisp_property('vertices',degree=2).values(cell_triangles)
+        cell_faces = topomesh.wisp_property('barycenter',degree=0).values(cell_triangle_vertices)
+
+        coords = np.mgrid[np.min(cell_faces[:,0]-1):np.max(cell_faces[:,0]+1),
+                          np.min(cell_faces[:,1]-1):np.max(cell_faces[:,1]+1)]
+        coords = np.transpose(coords,(1,2,0))
+        coords = np.concatenate([coords,np.zeros_like(coords[...,0])[...,np.newaxis]-10],axis=2)
+        #coords = np.concatenate([coords,(np.min(cell_faces[:,2]-1))*np.ones_like(coords[...,0])[...,np.newaxis]],axis=2)
+
+        cell_face_edge1 = cell_faces[:,1] - cell_faces[:,0]
+        cell_face_edge2 = cell_faces[:,2] - cell_faces[:,0]
+        cell_rays_t     = coords[:,:,np.newaxis] - cell_faces[:,0][np.newaxis,np.newaxis,:]
+        cell_rays_d     = np.zeros_like(cell_rays_t)
+        cell_rays_d[...,2] = 1.
+
+        cell_face_p = np.cross(cell_rays_d,cell_face_edge2[np.newaxis,np.newaxis,:])
+        cell_face_q = np.cross(cell_rays_t,cell_face_edge1[np.newaxis,np.newaxis,:])
+
+        cell_face_norm = np.einsum('...ij,...ij->...i',cell_face_p,cell_face_edge1[np.newaxis,np.newaxis,:])
+        cell_face_distance = np.einsum('...ij,...ij->...i',cell_face_q,cell_face_edge2[np.newaxis,np.newaxis,:])
+        cell_face_projection_u = np.einsum('...ij,...ij->...i',cell_face_p,cell_rays_t)
+        cell_face_projection_v = np.einsum('...ij,...ij->...i',cell_face_q,cell_rays_d)
+        
+        cell_face_ray_intersection = np.concatenate([cell_face_distance[...,np.newaxis],cell_face_projection_u[...,np.newaxis],cell_face_projection_v[...,np.newaxis]],axis=3)/cell_face_norm[...,np.newaxis]        
+
+        for z in xrange(np.min(cell_faces[:,2]-1),np.max(cell_faces[:,2]+2)):
+            rays_intersections = np.where((cell_face_ray_intersection[...,0]>z)&(cell_face_ray_intersection[...,1]>0)&(cell_face_ray_intersection[...,1]<1)&(cell_face_ray_intersection[...,2]>0)&(cell_face_ray_intersection[...,2]<1))
+            layer = np.zeros_like(coords[:,:,0])
+
+        cell_end_time = time()
+        print "  <-- Rasterizing cell",c,"     [",end_time-start_time,"s]"
+
+
+    end_time = time()
+    print "<-- Rasterizing topomesh     [",end_time-start_time,"s]"
 
 def filter_topomesh_property(topomesh,property_name,degree,coef=0.5,normalize=False):
     assert topomesh.has_wisp_property(property_name,degree=degree,is_computed=True)
@@ -1488,6 +1462,72 @@ def topomesh_property_gaussian_filtering(topomesh,property_name,degree,adjacency
         filtered_properties = (vertex_gaussian[...,np.newaxis]*properties[:,np.newaxis]).sum(axis=0) / vertex_gaussian.sum(axis=0)[...,np.newaxis]
 
     topomesh.update_wisp_property(property_name,degree=degree,values=filtered_properties,keys=np.array(list(topomesh.wisps(degree))))
+
+
+def epidermis_topomesh(topomesh,cells=None):
+    import numpy as np
+    from copy import deepcopy
+    from openalea.container import PropertyTopomesh
+    from openalea.mesh.property_topomesh_analysis import compute_topomesh_property
+    
+    compute_topomesh_property(topomesh,'epidermis',3)
+    compute_topomesh_property(topomesh,'epidermis',1)
+    compute_topomesh_property(topomesh,'epidermis',0)
+    
+    if cells is None:
+        epidermis_topomesh = deepcopy(topomesh)
+    else:
+        faces = np.array(np.unique(np.concatenate([np.array(list(topomesh.borders(3,c))) for c in cells])),int)
+        edges = np.array(np.unique(np.concatenate([np.array(list(topomesh.borders(2,t))) for t in faces])),int)
+        vertices = np.array(np.unique(np.concatenate([np.array(list(topomesh.borders(1,e))) for e in edges])),int)
+        epidermis_topomesh = PropertyTopomesh(3)
+        vertices_to_pids = {}
+        for v in vertices:
+            pid = epidermis_topomesh.add_wisp(0,v)
+            vertices_to_pids[v] = pid
+        edges_to_eids = {}
+        for e in edges:
+            eid = epidermis_topomesh.add_wisp(1,e)
+            edges_to_eids[e] = eid
+            for v in topomesh.borders(1,e):
+                epidermis_topomesh.link(1,eid,vertices_to_pids[v])
+        faces_to_fids = {}
+        for f in faces:
+            fid = epidermis_topomesh.add_wisp(2,f)
+            faces_to_fids[f] = fid
+            for e in topomesh.borders(2,f):
+                epidermis_topomesh.link(2,fid,edges_to_eids[e])
+        for c in cells:
+            cid = epidermis_topomesh.add_wisp(3,c)
+            for f in topomesh.borders(3,c):
+                epidermis_topomesh.link(3,cid,faces_to_fids[f])
+    
+    vertices_to_remove = []
+    for v in epidermis_topomesh.wisps(0):
+        if not topomesh.wisp_property('epidermis',0)[v]:
+            vertices_to_remove.append(v)
+    for v in vertices_to_remove:
+        epidermis_topomesh.remove_wisp(0,v)
+    edges_to_remove = []
+    for e in epidermis_topomesh.wisps(1):
+        if not topomesh.wisp_property('epidermis',1)[e]:
+            edges_to_remove.append(e)
+    for e in edges_to_remove:
+        epidermis_topomesh.remove_wisp(1,e)
+    faces_to_remove = []
+    for f in epidermis_topomesh.wisps(2):
+        if not topomesh.wisp_property('epidermis',2)[f]:
+            faces_to_remove.append(f)
+    for f in faces_to_remove:
+        epidermis_topomesh.remove_wisp(2,f)
+    cells_to_remove = []
+    for c in epidermis_topomesh.wisps(3):
+        if not topomesh.wisp_property('epidermis',3)[c]:
+            cells_to_remove.append(c)
+    for c in cells_to_remove:
+        epidermis_topomesh.remove_wisp(3,c)
+    epidermis_topomesh.update_wisp_property('barycenter',0,topomesh.wisp_property('barycenter',0).values(list(epidermis_topomesh.wisps(0))),keys=np.array(list(epidermis_topomesh.wisps(0))))
+    return epidermis_topomesh
 
     
 

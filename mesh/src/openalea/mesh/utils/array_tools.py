@@ -1,1 +1,0 @@
-from openalea.cellcomplex.property_topomesh.utils.array_tools import *
