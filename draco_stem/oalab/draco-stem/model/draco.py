@@ -39,7 +39,13 @@ if not os.path.exists(dirname+"/output_meshes/"+filename):
 
 inputfile = dirname+"/segmented_images/"+filename+".inr.gz"
 
-img = sphere_tissue_image(size=200, n_points=40)
+
+
+size = 400.
+n_points = int((4.*np.power(size/4.,2.))/(np.power(15.,2)))
+print size," -> ",n_points
+
+img = sphere_tissue_image(size=size, n_points=n_points)
 
 imsave(inputfile,img)
 
@@ -50,41 +56,13 @@ img = imread(inputfile)
 #img = SpatialImage(np.concatenate([img[:,:,35:],np.ones((img.shape[0],img.shape[1],5))],axis=2).astype(np.uint16),resolution=img.resolution)
 
 
-
 cell_vertex_file = dirname+"/output_meshes/"+filename+"/image_cell_vertex.dict"
 triangulation_file = dirname+"/output_meshes/"+filename+"/"+filename+"_draco_adjacency_complex.pkl"
 
 from openalea.container import array_dict
 
-# size = 50
-# img = np.ones((size,size,size),np.uint8)
+world.add(img,"segmented_image",colormap='glasbey',alphamap='constant',bg_id=1,alpha=1.0)
 
-# points = {}
-# points[11] = np.array([1,0,0],float)*size
-# points[12] = np.array([0,1,0],float)*size
-# points[31] = np.array([0,0,1],float)*size
-# points[59] = np.array([1,1,1],float)*size
-# points = array_dict(points)
-# #img[10:50,10:50,30:50] = 59
-# #img[10:30,10:50,10:30] = 12
-# #img[30:50,10:30,10:30] = 11
-# #img[30:50,30:50,10:30] = 31
-
-# center = np.array([[size/2,size/2,size/2]],float)
-
-# from scipy.cluster.vq import vq
-
-# coords = np.transpose(np.mgrid[0:size,0:size,0:size],(1,2,3,0)).reshape((np.power(size,3),3))
-# labels = points.keys()[vq(coords,points.values())[0]]
-
-# ext_coords = coords[vq(coords,center)[1]>size/2.]
-
-# img[tuple(np.transpose(coords))] = labels
-# #img[tuple(np.transpose(ext_coords))] = 1
-# img = SpatialImage(img,resolution=(1,1,1))
-
-
-world.add(img,"segmented_image",colormap='glasbey',alphamap='constant',bg_id=1,alpha=0.02)
 
 #draco = DracoMesh(image=img, image_cell_vertex_file=cell_vertex_file, triangulation_file=triangulation_file)
 #draco = DracoMesh(image_file=inputfile, image_cell_vertex_file=cell_vertex_file)
@@ -99,7 +77,7 @@ world['image_cells_vertices'].set_attribute('point_radius',img.max())
 draco.delaunay_adjacency_complex(surface_cleaning_criteria = [])
 #draco.delaunay_adjacency_complex(surface_cleaning_criteria = ['surface','sliver','distance'])
 
-#draco.adjacency_complex_optimization(n_iterations=2)
+draco.adjacency_complex_optimization(n_iterations=2)
 
 from copy import deepcopy
 triangulation_topomesh = deepcopy(draco.triangulation_topomesh)
@@ -110,7 +88,8 @@ world['cell_adjacency_complex'].set_attribute('coef_3',0.95)#
 #world['cell_adjacency_complex_cells'].set_attribute('x_slice',(50,100))
 world['cell_adjacency_complex_cells'].set_attribute('display_colorbar',False)
 
-triangular = ['star','split']
+triangular = ['star','split','regular','projected']
+#triangular = ['star','split']
 image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3)
 #image_dual_topomesh = draco.draco_topomesh(reconstruction_triangulation = triangular)
 
@@ -123,7 +102,6 @@ L1_topomesh = epidermis_topomesh(image_dual_topomesh)
 world.add(L1_topomesh ,'dual_reconstuction')
 
 
-size = 200.
 center = np.array([size/2,size/2,size/2],float)*np.array(img.resolution)
     
 positions = L1_topomesh.wisp_property('barycenter',0)

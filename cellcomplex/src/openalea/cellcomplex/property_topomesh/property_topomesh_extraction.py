@@ -21,6 +21,8 @@ import numpy as np
 
 from copy import deepcopy
 
+from openalea.container import array_dict
+
 from openalea.mesh import PropertyTopomesh
 from openalea.cellcomplex.property_topomesh.property_topomesh_analysis import compute_topomesh_property
 
@@ -113,7 +115,7 @@ def cut_surface_topomesh(input_topomesh, z_cut=0, below=True):
     boundary_edges = np.array(list(topomesh.wisps(1)))[topomesh.wisp_property('boundary',1).values()==1]
     boundary_vertices = np.unique(topomesh.wisp_property('vertices',1).values(boundary_edges))
 
-    iso_z_positions = np.array([np.concatenate([topomesh.wisp_property('barycenter',0)[v][:2],[z_cut+2]]) if v in boundary_vertices else  topomesh.wisp_property('barycenter',0)[v] for v in topomesh.wisps(0)])
+    iso_z_positions = np.array([np.concatenate([topomesh.wisp_property('barycenter',0)[v][:2],[z_cut+(1-2*below)*2]]) if v in boundary_vertices else  topomesh.wisp_property('barycenter',0)[v] for v in topomesh.wisps(0)])
     topomesh.update_wisp_property('barycenter',0,array_dict(iso_z_positions,list(topomesh.wisps(0))))
 
     return topomesh
