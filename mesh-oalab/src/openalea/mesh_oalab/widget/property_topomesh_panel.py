@@ -32,11 +32,30 @@ from openalea.oalab.widget.world import WorldModel
 
 from openalea.container import PropertyTopomesh, array_dict
 
-from openalea.mesh.triangular_mesh import topomesh_to_triangular_mesh
+try:
+    from openalea.mesh.triangular_mesh import topomesh_to_triangular_mesh
+except:
+    print "Openalea.Cellcomplex must be installed to use TopomeshControls!"
+    raise
+
 
 import numpy as np
 
 from tissuelab.gui.vtkviewer.vtkworldviewer import setdefault, world_kwargs
+
+
+element_names = dict(zip(range(4),['vertices','edges','faces','cells']))
+
+cst_proba = dict(step=0.01, min=0, max=1)
+cst_degree = dict(step=1,min=0,max=3)
+
+attribute_definition = {}
+attribute_definition['topomesh'] = {}
+for degree in xrange(4):
+    attribute_definition['topomesh']["display_"+str(degree)] = dict(value=False,interface="IBool",constraints={},label="Display "+element_names[degree])
+    attribute_definition['topomesh']["property_degree_"+str(degree)] = dict(value=degree,interface="IInt",constraints=cst_degree,label="Degree") 
+    attribute_definition['topomesh']["property_name_"+str(degree)] = dict(value="",interface="IEnumStr",constraints=dict(enum=[""]),label="Property")     
+    attribute_definition['topomesh']["coef_"+str(degree)] = dict(value=1,interface="IFloat",constraints=cst_proba,label="Coef") 
 
 
 def _property_names(world_object, attr_name, property_name, **kwargs):
@@ -215,12 +234,12 @@ class TopomeshControlPanel(QtGui.QWidget, AbstractListener):
             print "Set default attributes : ",world_object.name
 
             for degree in np.arange(4)[::-1]:
-                setdefault(world_object, dtype, 'display_'+str(degree), **kwargs)
+                setdefault(world_object, dtype, 'display_'+str(degree), attribute_definition=attribute_definition, **kwargs)
                 world_object.silent = True
-                setdefault(world_object, dtype, 'property_degree_'+str(degree), **kwargs)
-                setdefault(world_object, dtype, 'property_name_'+str(degree), conv=_property_names, **kwargs)
+                setdefault(world_object, dtype, 'property_degree_'+str(degree), attribute_definition=attribute_definition, **kwargs)
+                setdefault(world_object, dtype, 'property_name_'+str(degree), conv=_property_names, attribute_definition=attribute_definition, **kwargs)
                 if degree>1:
-                    setdefault(world_object, dtype, 'coef_'+str(degree), **kwargs)
+                    setdefault(world_object, dtype, 'coef_'+str(degree), attribute_definition=attribute_definition, **kwargs)
                 world_object.silent = False
             
             if not self._mesh.has_key(world_object.name):
@@ -403,7 +422,7 @@ class TopomeshControlPanel(QtGui.QWidget, AbstractListener):
                 display_degree = int(attribute['name'][-1])
                 print world_object['property_degree_'+str(display_degree)]
                 world_object.silent = True
-                setdefault(world_object, dtype, 'property_name_'+str(display_degree), conv=_property_names, **kwargs)
+                setdefault(world_object, dtype, 'property_name_'+str(display_degree), conv=_property_names, attribute_definition=attribute_definition, **kwargs)
                 world_object.silent = False
                 # world_object.set_attribute("property_name_"+str(display_degree),"")
 

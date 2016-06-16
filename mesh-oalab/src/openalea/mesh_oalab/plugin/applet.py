@@ -21,7 +21,7 @@
 __revision__ = ""
 
 from openalea.core.plugin import PluginDef
-from openalea.core.authors import *
+from openalea.core.authors import gcerutti
 
 
 class AppletPlugin(object):
@@ -40,3 +40,17 @@ class TopomeshControl(AppletPlugin):
         # Load and instantiate graphical component that actually provide feature
         from openalea.mesh_oalab.widget.property_topomesh_panel import TopomeshControlPanel
         return TopomeshControlPanel
+
+
+@PluginDef
+class DataframeControl(AppletPlugin):
+    label = 'Dataframe Controls'
+    icon = 'dataframe_control.png'
+    authors = [gcerutti]
+    implement = 'IApplet'
+    __plugin__ = True
+
+    def __call__(self):
+        # Load and instantiate graphical component that actually provide feature
+        from openalea.mesh_oalab.widget.dataframe_panel import DataframeControlPanel
+        return DataframeControlPanel
