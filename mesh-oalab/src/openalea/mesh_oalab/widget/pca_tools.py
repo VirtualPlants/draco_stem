@@ -24,11 +24,6 @@ from scipy.cluster.vq                       import kmeans, vq
 
 from openalea.container.array_dict             import array_dict
 
-from sklearn.decomposition import PCA
-from sklearn.cross_validation import train_test_split
-from sklearn.naive_bayes import GaussianNB
-from sklearn.svm import SVC
-
 import matplotlib
 matplotlib.use( "MacOSX" )
 import matplotlib.pyplot as plt
@@ -99,8 +94,7 @@ else:
         print "  --> Principal Component Analysis on",n_components,"components : ",pca.explained_variance_ratio_
         projected_data = pca.transform(pca_data)
 
-        from vplants.plantgl.ext.color import GlasbeyMap, CurvMap
-
+        # from vplants.plantgl.ext.color import GlasbeyMap, CurvMap
         #cmap = kwargs.get("colormap",GlasbeyMap(0,255))
         #cmap = kwargs.get("colormap",CurvMap(classes.min(),classes.max() if classes.max()>classes.min() else classes.max()+1))
 
@@ -183,10 +177,10 @@ else:
         # axes.contourf(xx, yy, proba, cmap=my_color_map, alpha=.25)
 
         axes.set_xlim(x_min,x_max)
-        axes.set_xlabel("PCA Component 1",fontproperties=font, size=10, style='italic')
+        axes.set_xlabel("PCA Component 1 ("+str(np.round(100.*pca.explained_variance_ratio_[0],decimals=2))+"%)",fontproperties=font, size=10, style='italic')
         axes.set_xticklabels(axes.get_xticks(),fontproperties=font, size=12)
         axes.set_ylim(y_min,y_max )
-        axes.set_ylabel("PCA Component 2", fontproperties=font, size=10, style='italic')
+        axes.set_ylabel("PCA Component 2 ("+str(np.round(100.*pca.explained_variance_ratio_[1],decimals=2))+"%)", fontproperties=font, size=10, style='italic')
         axes.set_yticklabels(axes.get_yticks(),fontproperties=font, size=12)
         # axes.axis('equal')
         # plt.show()

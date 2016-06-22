@@ -20,14 +20,14 @@
 import numpy as np
 from scipy import ndimage as nd
 
-from scipy.cluster.vq import vq
+# from scipy.cluster.vq import vq
 
 from openalea.container.array_dict import array_dict
 from openalea.container.property_topomesh import PropertyTopomesh
 from openalea.cellcomplex.property_topomesh.property_topomesh_analysis import *
-from openalea.cellcomplex.property_topomesh.utils.tissue_analysis_tools import cell_vertex_extraction
+# from openalea.cellcomplex.property_topomesh.utils.tissue_analysis_tools import cell_vertex_extraction
 from openalea.cellcomplex.property_topomesh.utils.array_tools import array_unique
-from openalea.container.topomesh_algo import is_collapse_topo_allowed, collapse_edge
+# from openalea.container.topomesh_algo import is_collapse_topo_allowed, collapse_edge
 
 from time                                   import time
 from copy                                   import deepcopy

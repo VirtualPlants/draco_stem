@@ -44,7 +44,7 @@ except:
     raise
 
 try:
-    import matplotlib
+    import matplotlib as mpl
     import matplotlib.pyplot as plt
     import matplotlib.patches as patch
 except:
@@ -60,14 +60,14 @@ except:
 import numpy as np
 import time
 
-from cute_plot import simple_plot, smooth_plot, histo_plot, violin_plot, density_plot
+from cute_plot import simple_plot, smooth_plot, histo_plot, violin_plot, box_plot, density_contour_plot, map_plot
 from pca_tools import pca_analysis
 
 from tissuelab.gui.vtkviewer.vtkworldviewer import setdefault, world_kwargs, _colormap
 
 
 cst_figure = dict(step=1,min=0,max=9)
-cst_plots = dict(enum=['scatter','smooth','histogram','density','violin','PCA'])
+cst_plots = dict(enum=['scatter','line','distribution','cumulative','boxplot','violin','density','map','PCA'])
 cst_regression = dict(enum=['','linear','quadratic','cubic','exponential','logarithmic','fireworks'])
 cst_legend = dict(enum=['','top_right','bottom_right','top_left','bottom_left'])
 cst_size = dict(step=5, min=0, max=100)
@@ -87,7 +87,6 @@ dataframe_attributes['dataframe']['plot'] = dict(value=0,interface="IEnumStr",co
 
 dataframe_attributes['dataframe']['markersize'] = dict(value=50,interface="IInt",constraints=cst_size,label=u"Marker Size")
 dataframe_attributes['dataframe']['linewidth'] = dict(value=1,interface="IInt",constraints=cst_width,label=u"Linewidth")
-dataframe_attributes['dataframe']['cumulative'] = dict(value=False,interface="IBool",label=u"Cumulative")
 dataframe_attributes['dataframe']['alpha'] = dict(value=1.0, interface=IFloat, constraints=cst_proba,label=u"Alpha")
 dataframe_attributes['dataframe']['smooth_factor'] = dict(value=0.0, interface=IFloat, constraints=cst_proba,label=u"Smoothing")
 dataframe_attributes['dataframe']['regression'] = dict(value='', interface=IEnumStr, constraints=cst_regression,label=u"Regression")
@@ -117,7 +116,7 @@ class DataframeControlPanel(QtGui.QWidget, AbstractListener):
         self.interpreter = get_interpreter()
         self.interpreter.locals['dataframe_control'] = self
 
-        self._figure = 0
+        self._figures = {}
 
         self._layout = QtGui.QVBoxLayout(self)
         self._view = None
@@ -150,8 +149,9 @@ class DataframeControlPanel(QtGui.QWidget, AbstractListener):
         elif signal == 'world_object_removed':
             world, old_object = data
             if isinstance(old_object.data,pd.DataFrame):
-                figure = plt.figure(old_object['figure'])
+                figure = plt.figure(self._figures[old_object.name])
                 figure.clf()
+                del self._figures[old_object.name]
                 self.refresh()
         elif signal == 'world_object_changed':
             world, old_object, world_object = data
@@ -171,8 +171,8 @@ class DataframeControlPanel(QtGui.QWidget, AbstractListener):
             self.world.unregister_listener(self)
             self.world = None
 
-        for f in xrange(cst_figure['max']):
-            plt.figure(f).clf()
+        for o in self._figures.keys():
+            plt.figure(self._figures[o]).clf()
             plt.draw()
 
     def refresh_world_object(self, world_object):
@@ -193,6 +193,7 @@ class DataframeControlPanel(QtGui.QWidget, AbstractListener):
             for variable_type in ['label']:
                 setdefault(world_object, dtype, variable_type+'_variable', conv=_dataframe_columns, attribute_definition=dataframe_attributes, **kwargs)
                 setdefault(world_object, dtype,  variable_type+'_colormap', conv=_colormap, attribute_definition=dataframe_attributes, **kwargs)
+                setdefault(world_object, dtype, variable_type+'_range', attribute_definition=dataframe_attributes, **kwargs)
 
             for variable_type in ['X','Y']:
                 setdefault(world_object, dtype, variable_type+'_variable', conv=_dataframe_columns, attribute_definition=dataframe_attributes, **kwargs)
@@ -203,7 +204,6 @@ class DataframeControlPanel(QtGui.QWidget, AbstractListener):
 
             setdefault(world_object, dtype, 'markersize', attribute_definition=dataframe_attributes, **kwargs)
             setdefault(world_object, dtype, 'linewidth', attribute_definition=dataframe_attributes, **kwargs)
-            setdefault(world_object, dtype, 'cumulative', attribute_definition=dataframe_attributes, **kwargs)
             setdefault(world_object, dtype, 'alpha', attribute_definition=dataframe_attributes, **kwargs)
             setdefault(world_object, dtype, 'smooth_factor', attribute_definition=dataframe_attributes, **kwargs)
 
@@ -272,10 +272,15 @@ class DataframeControlPanel(QtGui.QWidget, AbstractListener):
                 labels = classes
 
             if world_object['plot'] != 'PCA':
-                if classes.dtype == np.dtype('O'):
-                    valid_points = np.where(True - (np.isnan(X) | np.isnan(Y)))
-                else:
-                    valid_points = np.where(True - (np.isnan(X) | np.isnan(Y) | np.isnan(classes)))
+                point_invalidity = np.zeros(len(classes)).astype(bool)
+                point_invalidity = point_invalidity | np.isnan(X)
+                point_invalidity = point_invalidity | np.isnan(Y)
+                if classes.dtype != np.dtype('O'):
+                    point_invalidity = point_invalidity | np.isnan(classes)
+                if labels.dtype != np.dtype('O'):
+                    point_invalidity = point_invalidity | np.isnan(labels)
+                print "Invalid points : ",point_invalidity.sum()
+                valid_points = np.where(True - point_invalidity)
             else:
                 point_invalidity = np.zeros(len(classes)).astype(bool)
                 for variable in variables:
@@ -288,7 +293,16 @@ class DataframeControlPanel(QtGui.QWidget, AbstractListener):
             Y = Y[valid_points]
             classes = classes[valid_points]
             labels = labels[valid_points]
-            print data[0]
+
+            if classes.dtype != np.dtype('O') and len(np.unique(classes)) > len(classes)/5. or (len(np.unique(classes)) > 50):
+                magnitude = np.power(10,np.around(4*np.log10(np.nanmean(classes)+np.nanstd(classes)+1e-7))/4+0.5)
+                magnitude = np.around(magnitude,int(-np.log10(magnitude))+1)
+                class_values = np.array(np.maximum(np.minimum(np.around(10*classes/magnitude),10),0),int)
+                classes = (np.arange(11)*magnitude)[class_values]
+
+            label_variable = world_object['label_variable']
+            if label_variable == "":
+                labels = classes
 
             class_list = np.sort(np.unique(classes))
             n_classes = len(class_list)
@@ -300,85 +314,130 @@ class DataframeControlPanel(QtGui.QWidget, AbstractListener):
             cmap._color_points = world_object['label_colormap']['color_points']
             cmap._compute()
 
-            old_figure = plt.figure(self._figure)
-            old_figure.clf()
-            plt.draw()
+            if self._figures.has_key(world_object.name):
+                old_figure = plt.figure(self._figures[world_object.name])
+                old_figure.clf()
+                plt.draw()
 
-            self._figure = world_object['figure']
-            figure = plt.figure(self._figure)
-
-            # figure_axes = copy(figure.gca())
-            # old_figure.sca(figure_axes)
-
+            self._figures[world_object.name] = world_object['figure']
+            figure = plt.figure(self._figures[world_object.name])
             figure.clf()
 
             markersize = world_object['markersize']
             linewidth = world_object['linewidth']
-            cumul = world_object['cumulative']
             alpha = world_object['alpha']
             smooth = world_object['smooth_factor']
 
             xlabel = "".join([w.capitalize()+" " for w in X_variable.split('_')])
             ylabel = "".join([w.capitalize()+" " for w in Y_variable.split('_')])
+            label_label = "".join([w.capitalize()+" " for w in label_variable.split('_')])
 
-            for i_class, c in enumerate(class_list):
+            # if (n_classes > 1) or (n_labels == 1) or np.all(labels == classes) or (labels.dtype == np.dtype('O')):
+            if (n_classes > 1) or (n_labels == 1) or np.all(labels == classes):
+                plot_legend = 'labels'
 
-                label = np.unique(labels[classes==c])[0]
-                i_label = np.where(label_list==label)[0][0]
+                for i_class, c in enumerate(class_list):
 
-                if world_object['label_colormap']['name'] != 'glasbey':
-                    # class_color = np.array(cmap.get_color((i_class+1)/float(n_classes+1)))
-                    class_color = np.round(cmap.get_color((i_label+1)/float(n_labels+1)),decimals=3)
+                    label = np.unique(labels[classes==c])[0]
+                    i_label = np.where(label_list==label)[0][0]
+
+                    if world_object['label_colormap']['name'] != 'glasbey':
+                        # class_color = np.array(cmap.get_color((i_class+1)/float(n_classes+1)))
+                        class_color = np.round(cmap.get_color((i_label+1)/float(n_labels+1)),decimals=3)
+                    else:
+                        #class_color = np.array(cmap.get_color((i_class+1)/255.))
+                        class_color = np.round(cmap.get_color((i_label+1)/255.),decimals=3)
+
+                    _,figure_labels = figure.gca().get_legend_handles_labels()
+                    plot_label = str(label) if str(label) not in figure_labels else None
+
+
+                    if world_object['plot'] in ['scatter','line','density']:
+                        if world_object['regression'] == 'fireworks':
+                            class_center = np.array([X[classes==c].mean(),Y[classes==c].mean()])
+                            [figure.gca().plot([x,class_center[0]],[y,class_center[1]],color=class_color,alpha=alpha/5.,linewidth=linewidth) for x,y in zip(X[classes==c],Y[classes==c])]
+                    
+
+                    if world_object['plot'] == 'scatter':
+                        simple_plot(figure,X[classes==c],Y[classes==c],class_color,xlabel=xlabel,ylabel=ylabel,linked=False,marker_size=markersize,linewidth=linewidth,alpha=alpha,label=plot_label)
+                    elif world_object['plot'] == 'line':
+                        simple_plot(figure,np.sort(X[classes==c]),Y[classes==c][np.argsort(X[classes==c])],class_color,xlabel=xlabel,ylabel=ylabel,linked=True,marker_size=0,linewidth=(linewidth+1)/2.,alpha=alpha,label=plot_label)
+                        # smooth_plot(figure,np.sort(X[classes==c]),Y[classes==c][np.argsort(X[classes==c])],class_color,class_color,xlabel=xlabel,ylabel=ylabel,smooth_factor=smooth*Y.mean(),linewidth=linewidth,alpha=alpha,label=plot_label)
+                    elif world_object['plot'] == 'distribution':
+                        histo_plot(figure,X[classes==c],class_color,xlabel=xlabel,ylabel="Number of Elements (%)",cumul=False,bar=False,smooth_factor=smooth*10,linewidth=linewidth,alpha=alpha,label=plot_label)
+                    elif world_object['plot'] == 'cumulative':
+                        histo_plot(figure,X[classes==c],class_color,xlabel=xlabel,ylabel="Number of Elements (%)",cumul=True,bar=False,smooth_factor=smooth*10,linewidth=linewidth,alpha=alpha,label=plot_label)
+                    elif world_object['plot'] == 'density':
+                        data_range = [[X.min()-0.5*(X.max()-X.min()),X.max()+0.5*(X.max()-X.min())],[Y.min()-0.5*(Y.max()-Y.min()),Y.max()+0.5*(Y.max()-Y.min())]]
+                        density_contour_plot(figure,X[classes==c],Y[classes==c],class_color,data_range,xlabel=xlabel,ylabel=ylabel,smooth_factor=smooth*10,marker_size=markersize,linewidth=linewidth,alpha=alpha,label=plot_label)
+
+                    if world_object['plot'] in ['scatter','line','density']:
+                        if world_object['regression'] in ['linear','quadratic','cubic','exponential','logarithmic']:
+                            reg_X = np.linspace(X.min() -0.5*(X.max()-X.min()),X.min() +1.5*(X.max()-X.min()),400)
+                            if world_object['regression'] in ['linear','quadratic','cubic']:
+                                degree = 1 if world_object['regression']=='linear' else 2 if world_object['regression']=='quadratic' else 3
+                                p = np.polyfit(X[classes==c],Y[classes==c],deg=degree)
+                                reg_Y = np.polyval(p,reg_X)
+                            elif world_object['regression'] in ['exponential']:
+                                p = np.polyfit(X[classes==c],np.log(Y[classes==c]),deg=1)
+                                reg_Y = np.exp(np.polyval(p,reg_X))
+                            elif world_object['regression'] in ['logarithmic']:
+                                p = np.polyfit(np.log(X[classes==c]),Y[classes==c],deg=1)
+                                reg_Y = np.polyval(p,np.log(reg_X))
+                            simple_plot(figure,reg_X,reg_Y,class_color,xlabel=xlabel,ylabel=ylabel,linked=True,marker_size=0,linewidth=linewidth+np.sqrt(markersize)/np.pi,alpha=(alpha+1)/2.)
+                        elif world_object['regression'] in ['fireworks']:
+                            class_covariance = np.cov(np.transpose([X[classes==c],Y[classes==c]]),rowvar=False)
+                            vals, vecs = np.linalg.eigh(class_covariance)
+                            order = vals.argsort()[::-1]
+                            vals = vals[order]
+                            vecs = vecs[:,order]
+                            theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
+                            width, height = 2.*np.sqrt(2)*np.sqrt(vals)
+                            class_ellipse = patch.Ellipse(xy=class_center, width=width, height=height, angle=theta,color=class_color,alpha=alpha/10., linewidth=2.*linewidth)
+                            figure.gca().add_patch(class_ellipse)
+                            figure.gca().scatter([class_center[0]],[class_center[1]],marker=u'o',c=class_color,s=2.*markersize,linewidth=1.5*linewidth,alpha=(alpha+1.)/2.)
+            else:
+                plot_legend = 'colorbar'
+
+                if labels.dtype == np.dtype('O'):
+                    labels = np.sum([i*(labels==l).astype(int) for i,l in enumerate(label_list)],axis=0)+1
+                    print labels
+                    label_colors = np.array([np.round(cmap.get_color(l),decimals=3) for l in labels/float(labels.max()+1.)])
+                    mpl_norm = mpl.colors.Normalize(vmin=0, vmax=labels.max()+1.)
+                    cbar_ticks = np.arange(labels.max())+1
+                    cbar_ticklabels = label_list
                 else:
-                    #class_color = np.array(cmap.get_color((i_class+1)/255.))
-                    class_color = np.round(cmap.get_color((i_label+1)/255.),decimals=3)
+                    label_range = (labels.min() + world_object['label_range'][0]*(labels.max()-labels.min())/100.,labels.min() + world_object['label_range'][1]*(labels.max()-labels.min())/100.)
+                    label_colors = np.array([np.round(cmap.get_color(l),decimals=3) for l in (labels-label_range[0])/float(label_range[1]-label_range[0])])
+                    mpl_norm = mpl.colors.Normalize(vmin=label_range[0], vmax=label_range[1])
+                    cbar_ticks = np.linspace(label_range[0],label_range[1],5)
+                    cbar_ticklabels = np.round(cbar_ticks,decimals=3)
 
-                _,figure_labels = figure.gca().get_legend_handles_labels()
-                plot_label = str(label) if str(label) not in figure_labels else None
+                    print (labels.min(),labels.max()), world_object['label_range']
+                    print label_range, cbar_ticks, cbar_ticklabels
 
+                color_dict = dict(red=[],green=[],blue=[])
+                for p in np.sort(cmap._color_points.keys()):
+                    for k,c in enumerate(['red','green','blue']):
+                        color_dict[c] += [(p,cmap._color_points[p][k],cmap._color_points[p][k])]
+                for c in ['red','green','blue']:
+                    color_dict[c] = tuple(color_dict[c])
+                # print color_dict
 
-                if world_object['plot'] in ['scatter','smooth']:
-                    if world_object['regression'] == 'fireworks':
-                        class_center = np.array([X[classes==c].mean(),Y[classes==c].mean()])
-                        [figure.gca().plot([x,class_center[0]],[y,class_center[1]],color=class_color,alpha=alpha/5.,linewidth=linewidth) for x,y in zip(X[classes==c],Y[classes==c])]
-                
+                mpl_cmap = mpl.colors.LinearSegmentedColormap(cmap.name, color_dict)
 
                 if world_object['plot'] == 'scatter':
-                    simple_plot(figure,X[classes==c],Y[classes==c],class_color,xlabel=xlabel,ylabel=ylabel,linked=False,marker_size=markersize,linewidth=linewidth,alpha=alpha,label=plot_label)
-                elif world_object['plot'] == 'smooth':
-                    smooth_plot(figure,np.sort(X[classes==c]),Y[classes==c][np.argsort(X[classes==c])],class_color,class_color,xlabel=xlabel,ylabel=ylabel,smooth_factor=smooth*Y.mean(),linewidth=linewidth,alpha=alpha,label=plot_label)
-                elif world_object['plot'] == 'histogram':
-                    histo_plot(figure,X[classes==c],class_color,xlabel=xlabel,ylabel="Number of Elements (%)",cumul=cumul,bar=False,smooth_factor=smooth*10,linewidth=linewidth,alpha=alpha,label=plot_label)
-                elif world_object['plot'] == 'density':
-                    density_plot(figure,X[classes==c],Y[classes==c],class_color,xlabel=xlabel,ylabel=ylabel,n_points=int(6./(smooth+0.1)),marker_size=markersize,linewidth=linewidth,alpha=alpha,label=plot_label)
+                    simple_plot(figure,X,Y,label_colors,xlabel=xlabel,ylabel=ylabel,linked=False,marker_size=markersize,linewidth=linewidth,alpha=alpha)
+                elif world_object['plot'] == 'line':
+                    simple_plot(figure,np.sort(X),Y[np.argsort(X)],label_colors,xlabel=xlabel,ylabel=ylabel,linked=True,marker_size=0,linewidth=(linewidth+1)/2.,alpha=alpha)
+                elif world_object['plot'] == 'map':
+                    data_range = [[X.min()-0.5*(X.max()-X.min()),X.max()+0.5*(X.max()-X.min())],[Y.min()-0.5*(Y.max()-Y.min()),Y.max()+0.5*(Y.max()-Y.min())]]
+                    # print mpl_norm(labels)
+                    map_plot(figure,X,Y,mpl_norm(labels),mpl_cmap,data_range,xlabel=xlabel,ylabel=ylabel,smooth_factor=smooth*10,linewidth=linewidth,alpha=alpha)
 
-                if world_object['plot'] in ['scatter','smooth','density']:
-                    if world_object['regression'] in ['linear','quadratic','cubic','exponential','logarithmic']:
-                        reg_X = np.linspace(X.min() -0.5*(X.max()-X.min()),X.min() +1.5*(X.max()-X.min()),400)
-                        if world_object['regression'] in ['linear','quadratic','cubic']:
-                            degree = 1 if world_object['regression']=='linear' else 2 if world_object['regression']=='quadratic' else 3
-                            p = np.polyfit(X[classes==c],Y[classes==c],deg=degree)
-                            reg_Y = np.polyval(p,reg_X)
-                        elif world_object['regression'] in ['exponential']:
-                            p = np.polyfit(X[classes==c],np.log(Y[classes==c]),deg=1)
-                            reg_Y = np.exp(np.polyval(p,reg_X))
-                        elif world_object['regression'] in ['logarithmic']:
-                            p = np.polyfit(np.log(X[classes==c]),Y[classes==c],deg=1)
-                            reg_Y = np.polyval(p,np.log(reg_X))
-                        simple_plot(figure,reg_X,reg_Y,class_color,xlabel=xlabel,ylabel=ylabel,linked=True,marker_size=0,linewidth=linewidth+np.sqrt(markersize)/np.pi,alpha=(alpha+1)/2.)
-                    elif world_object['regression'] in ['fireworks']:
-                        class_covariance = np.cov(np.transpose([X[classes==c],Y[classes==c]]),rowvar=False)
-                        vals, vecs = np.linalg.eigh(class_covariance)
-                        order = vals.argsort()[::-1]
-                        vals = vals[order]
-                        vecs = vecs[:,order]
-                        theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
-                        width, height = 2.*np.sqrt(2)*np.sqrt(vals)
-                        class_ellipse = patch.Ellipse(xy=class_center, width=width, height=height, angle=theta,color=class_color,alpha=alpha/10., linewidth=2.*linewidth)
-                        figure.gca().add_patch(class_ellipse)
-                        figure.gca().scatter([class_center[0]],[class_center[1]],marker=u'o',c=class_color,s=2.*markersize,linewidth=1.5*linewidth,alpha=(alpha+1.)/2.)
 
-            if world_object['plot'] in ['violin','PCA']:
+
+            if world_object['plot'] in ['boxplot','violin','PCA']:
                 class_labels = [np.unique(labels[classes==c])[0] for c in class_list]
                 class_i_labels = [np.where(label_list==l)[0][0] for l in class_labels]
                 if world_object['label_colormap']['name'] != 'glasbey':
@@ -388,9 +447,76 @@ class DataframeControlPanel(QtGui.QWidget, AbstractListener):
                     # class_colors = [np.array(cmap.get_color((i_class+1)/255.)) for i_class in xrange(n_classes)]
                     class_colors = [np.round(cmap.get_color((i_label+1)/255.),decimals=3) for i_label in class_i_labels]
 
-                if world_object['plot'] == 'violin':
-                    violin_plot(figure,np.arange(n_classes),np.array([X[classes==c] for c in class_list]),class_colors,xlabel="",ylabel=xlabel,linewidth=linewidth,marker_size=markersize)
+                if world_object['plot'] in ['boxplot','violin']:
+
+                    if Y_variable == "":
+                        if world_object['plot'] == 'violin':
+                            violin_plot(figure,np.arange(n_classes),np.array([X[classes==c] for c in class_list]),class_colors,xlabel="",ylabel=xlabel,linewidth=linewidth,marker_size=(markersize+50)/10)
+                        else:
+                            box_plot(figure,np.arange(n_classes),np.array([X[classes==c] for c in class_list]),class_colors,xlabel="",ylabel=xlabel,linewidth=linewidth,marker_size=(markersize+50)/10,alpha=alpha)
+                    else:
+
+                        plot_legend = 'labels'
+
+                        n_slices = 5
+                        if X.dtype != np.dtype('O') and len(np.unique(X)) > len(X)/5. or (len(np.unique(X)) > 50):
+                            magnitude = np.power(10,np.around(4*np.log10(np.nanmean(X)+np.nanstd(X)+1e-7))/4+0.5)
+                            magnitude = np.around(magnitude,int(-np.log10(magnitude))+1)
+                            class_values = np.array(np.maximum(np.minimum(np.around(n_slices*X/magnitude),n_slices),0),int)
+                            X = (np.arange(n_slices+1)*magnitude)[class_values]
+
+                        X_values = np.sort(np.unique(X))
+
+                        class_median = {}
+                        for c in class_list:
+                            class_median[c] = []
+
+                        for i,x in enumerate(X_values):
+                            if n_classes > 1:
+                                x_classes = i + np.arange(n_classes)/(3.*float(n_classes-1)) - 1/(2*3.)
+                                width = 1./(9.*float(n_classes-1))
+                            else:
+                                x_classes = np.array([i])
+                                width = None
+
+                            y_data = np.array([Y[X==x][classes[X==x]==c] for c in class_list if (classes[X==x]==c).sum()>1])
+                            x_classes = np.array([x_classes[i] for i,c in enumerate(class_list) if (classes[X==x]==c).sum()>1])
+                            x_class_colors = np.array([class_colors[i] for i,c in enumerate(class_list) if (classes[X==x]==c).sum()>1])
+                            x_represented_classes = np.array([c for c in class_list if (classes[X==x]==c).sum()>1])
+
+                            print y_data
+
+                            if len(x_classes)>0:
+
+                                if world_object['plot'] == 'violin':
+                                    violin_plot(figure,x_classes,y_data,x_class_colors,xlabel=xlabel,ylabel=ylabel,violin_width=width,linewidth=linewidth,marker_size=(markersize+50)/10)
+                                else:
+                                    box_plot(figure,x_classes,y_data,x_class_colors,xlabel=xlabel,ylabel=ylabel,box_width=width,linewidth=linewidth,marker_size=markersize,alpha=alpha)
+                   
+                    
+                            for c,x,y in zip(x_represented_classes,x_classes,y_data):
+                                class_median[c] += [[x,np.percentile(y,50)]]
+
+                        for c in class_list:
+                            label = np.unique(labels[classes==c])[0]
+                            i_label = np.where(label_list==label)[0][0]
+
+                            if world_object['label_colormap']['name'] != 'glasbey':
+                                # class_color = np.array(cmap.get_color((i_class+1)/float(n_classes+1)))
+                                class_color = np.round(cmap.get_color((i_label+1)/float(n_labels+1)),decimals=3)
+                            else:
+                                #class_color = np.array(cmap.get_color((i_class+1)/255.))
+                                class_color = np.round(cmap.get_color((i_label+1)/255.),decimals=3)
+
+                            _,figure_labels = figure.gca().get_legend_handles_labels()
+                            plot_label = str(label) if str(label) not in figure_labels else None
+
+                            simple_plot(figure,np.array(class_median[c])[:,0],np.array(class_median[c])[:,1],class_color,xlabel=xlabel,ylabel=ylabel,linked=True,marker_size=0,linewidth=(linewidth+1)/2.,alpha=alpha/2,label=plot_label)
+                    
+
+
                 elif world_object['plot'] == 'PCA':
+                    plot_legend = 'labels'
                     pca, projected_data = pca_analysis(data,classes,class_colors,class_labels,variables,pca_figure=figure,linewidth=linewidth,marker_size=markersize,alpha=alpha,draw_classes=world_object['regression'] in ['fireworks'])  
                     x_min,x_max = np.percentile(projected_data[:,0],1)-4,np.percentile(projected_data[:,0],99)+4
                     y_min,y_max = np.percentile(projected_data[:,1],1)-4,np.percentile(projected_data[:,1],99)+4    
@@ -400,38 +526,62 @@ class DataframeControlPanel(QtGui.QWidget, AbstractListener):
                     figure.gca().set_yticklabels(figure.gca().get_yticks())        
 
 
-            if world_object['plot'] in ['violin']:
+            if world_object['plot'] in ['boxplot','violin']:
+
                 ticks = figure.gca().get_xticks()
-                ticklabels = []
-                for t in xrange(len(ticks)):
-                    if np.any(np.isclose(ticks[t],range(n_classes),1e-3)):
-                        for c in xrange(n_classes):
-                            if np.isclose(ticks[t],c,1e-3):
-                                ticklabels += [class_labels[c]]
-                    else:
-                        ticklabels += [""]
+
+                if Y_variable == "":
+                    ticklabels = class_labels
+                    ticks = range(n_classes)
+                else:
+                    x_range = (-1 + world_object['X_range'][0]*(len(X_values))/100.,-1 + world_object['X_range'][1]*(len(X_values))/100.)
+                    figure.gca().set_xlim(*x_range)
+                    ticks = [i for i in range(len(X_values)) if (i>=x_range[0]) and (i<=x_range[1])]
+                    ticklabels = [X_values[i] for i in ticks]
+
+                # ticklabels = []
+                # for t in xrange(len(ticks)):
+                    # if np.any(np.isclose(ticks[t],range(n_classes),1e-3)):
+                        # for c in xrange(n_classes):
+                            # if np.isclose(ticks[t],c,1e-3):
+                                # ticklabels += [class_labels[c]]
+                    # else:
+                        # ticklabels += [""]
                 figure.gca().set_xticklabels(ticklabels)
+                figure.gca().set_xticks(ticks)
+
             elif world_object['plot'] != 'PCA':
                 x_range = (X.min() + world_object['X_range'][0]*(X.max()-X.min())/100.,X.min() + world_object['X_range'][1]*(X.max()-X.min())/100.)
                 figure.gca().set_xlim(*x_range)
                 figure.gca().set_xticklabels(figure.gca().get_xticks())
 
-            if world_object['plot'] in ['histogram']: 
+            if world_object['plot'] in ['distribution','cumulative']: 
                 figure.gca().set_ylim(*world_object['Y_range'])
                 figure.gca().set_yticklabels(figure.gca().get_yticks())
-            elif world_object['plot'] in ['violin']:
-                x_range = (X.min() + world_object['X_range'][0]*(X.max()-X.min())/100.,X.min() + world_object['X_range'][1]*(X.max()-X.min())/100.)
-                figure.gca().set_ylim(*x_range)
-                figure.gca().set_yticklabels(figure.gca().get_yticks())
+            elif world_object['plot'] in ['boxplot','violin'] and  Y_variable == "":
+                    x_range = (X.min() + world_object['X_range'][0]*(X.max()-X.min())/100.,X.min() + world_object['X_range'][1]*(X.max()-X.min())/100.)
+                    figure.gca().set_ylim(*x_range)
+                    figure.gca().set_yticklabels(figure.gca().get_yticks())
             elif world_object['plot'] != 'PCA':
                 y_range = (Y.min() + world_object['Y_range'][0]*(Y.max()-Y.min())/100.,Y.min() + world_object['Y_range'][1]*(Y.max()-Y.min())/100.)
                 figure.gca().set_ylim(*y_range)
                 figure.gca().set_yticklabels(figure.gca().get_yticks())
 
             legend_locations = dict(top_right=1,bottom_right=4,top_left=2,bottom_left=3)
+            colorbar_locations = dict(top_right=[0.12, 0.98, 0.78, 0.02],bottom_right=[0.9, 0.1, 0.02, 0.8],top_left=[0.0, 0.1, 0.02, 0.8],bottom_left=[0.12, 0.05, 0.78, 0.02])
+            colorbar_orientations = dict(top_right='horizontal',bottom_right='vertical',top_left='vertical',bottom_left='horizontal')
             if world_object['legend'] != "":
-                if world_object['plot'] not in ['violin']:
+                if plot_legend == 'labels':
                     figure.gca().legend(loc=legend_locations[world_object['legend']])
+                elif plot_legend == 'colorbar':
+                    ax = figure.gca()
+                    cb_ax = figure.add_axes(colorbar_locations[world_object['legend']])
+                    cb = mpl.colorbar.ColorbarBase(cb_ax, cmap=mpl_cmap, norm=mpl_norm, orientation=colorbar_orientations[world_object['legend']])
+                    cb.set_label(label_label)
+
+                    cb.set_ticks(cbar_ticks)
+                    cb.set_ticklabels(cbar_ticklabels)
+                    figure.sca(ax)
             
             plt.draw()
             # time.sleep(0.05)
