@@ -41,8 +41,9 @@ inputfile = dirname+"/segmented_images/"+filename+".inr.gz"
 
 
 
-size = 400.
-n_points = int((4.*np.power(size/4.,2.))/(np.power(15.,2)))
+size = 100.
+#n_points = int((4.*np.power(size/4.,2.))/(np.power(15.,2)))
+n_points = 21
 print size," -> ",n_points
 
 img = sphere_tissue_image(size=size, n_points=n_points)
@@ -71,7 +72,7 @@ draco = DracoMesh(image=img)
 #world.add(draco.segmented_image-(draco.segmented_image==1),'segmented_image',colormap='glasbey',alphamap='constant',bg_id=0)
 world.add(draco.point_topomesh,'image_cells')
 world['image_cells_vertices'].set_attribute('point_radius',img.max())
-#world.add(draco.layer_edge_topomesh['L1'],'L1_adjacency')
+world.add(draco.layer_edge_topomesh['L1'],'L1_adjacency')
 #world.add(draco.image_cell_vertex_topomesh,'image_cell_vertex')
 
 draco.delaunay_adjacency_complex(surface_cleaning_criteria = [])
@@ -88,8 +89,8 @@ world['cell_adjacency_complex'].set_attribute('coef_3',0.95)#
 #world['cell_adjacency_complex_cells'].set_attribute('x_slice',(50,100))
 world['cell_adjacency_complex_cells'].set_attribute('display_colorbar',False)
 
-triangular = ['star','split','regular','projected']
-#triangular = ['star','split']
+#triangular = ['star','remeshed','regular','projected']
+triangular = ['star','split']
 image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3)
 #image_dual_topomesh = draco.draco_topomesh(reconstruction_triangulation = triangular)
 
