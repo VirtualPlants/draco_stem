@@ -29,9 +29,7 @@ from openalea.mesh.utils.evaluation_tools import jaccard_index
 
 from openalea.draco_stem.draco.draco import DracoMesh
 
-
-
-from openalea.draco_stem.data.example_image import sphere_tissue_image
+from openalea.draco_stem.example_image import sphere_tissue_image
 
 def test_draco():
     n_points = 12

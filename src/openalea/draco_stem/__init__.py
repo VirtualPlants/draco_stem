@@ -6,4 +6,4 @@ __version__ = version.__version__
 
 # #}
 
-from draco import DracoMesh
+#from draco import DracoMesh

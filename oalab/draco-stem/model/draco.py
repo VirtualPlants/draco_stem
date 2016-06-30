@@ -18,7 +18,7 @@ from openalea.draco_stem.draco.draco import DracoMesh
 from openalea.oalab.colormap.colormap_def import load_colormaps
 
 from copy import deepcopy
-from openalea.draco_stem.data.example_image import sphere_tissue_image
+from openalea.draco_stem.example_image import sphere_tissue_image
 
 world.clear()
 
