@@ -1,0 +1,50 @@
+{
+  "_pkglts": {
+    "auto_install": true, 
+    "install_front_end": "stdout", 
+    "use_prompts": false, 
+    "version": 2
+  }, 
+  "base": {
+    "authors": [
+      [
+        "Guillaume Cerutti", 
+        "guillaume.cerutti@inria.fr"
+      ]
+    ], 
+    "namespace": "openalea", 
+    "pkgname": "draco_stem", 
+    "url": null
+  }, 
+  "coverage": {}, 
+  "doc": {
+    "description": "Generating high-quality meshes of cell tissue from 3D segmented images", 
+    "keywords": []
+  }, 
+  "github": {
+    "owner": "{{ base.authors[0][0] }}", 
+    "project": "{{ base.pkgname }}", 
+    "url": "https://github.com/{{ github.owner }}/{{ github.project }}"
+  }, 
+  "license": {
+    "name": "cecill-c", 
+    "organization": "openalea", 
+    "project": "{{ base.pkgname }}", 
+    "year": 2015
+  }, 
+  "pysetup": {
+    "intended_versions": [
+      "27"
+    ]
+  }, 
+  "sphinx": {
+    "autodoc_dvlpt": true, 
+    "theme": "default"
+  }, 
+  "test": {}, 
+  "version": {
+    "major": 0, 
+    "minor": 8, 
+    "post": 0
+  }
+}
