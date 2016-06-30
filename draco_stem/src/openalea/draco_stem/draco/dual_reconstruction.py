@@ -245,8 +245,8 @@ def tetrahedra_dual_topomesh(image_tetrahedra, positions, voronoi=True, exterior
                             vertex_triangle_normal = vertex_triangle_normal/np.linalg.norm(vertex_triangle_normal)
 
                             surface_triangle_intersection = intersecting_triangle(np.array([vertex_positions[pid],vertex_positions[pid]+1000.*vertex_triangle_normal]),surface_triangle_points)[0]
-                            print surface_triangle_intersection
-                            print np.where(surface_triangle_intersection)
+                            # print surface_triangle_intersection
+                            # print np.where(surface_triangle_intersection)
                             if surface_triangle_intersection.sum() > 0:
                                 surface_triangle = np.where(surface_triangle_intersection)[0][0]
                                 surface_triangle_center = surface_triangle_points[surface_triangle].mean(axis=0)

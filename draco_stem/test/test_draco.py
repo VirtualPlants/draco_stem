@@ -31,7 +31,7 @@ from openalea.draco_stem.draco.draco import DracoMesh
 
 
 
-from example_image import sphere_tissue_image
+from openalea.draco_stem.data.example_image import sphere_tissue_image
 
 def test_draco():
     n_points = 12
@@ -57,7 +57,7 @@ def test_draco():
     draco_tetrahedra = np.sort([list(draco.triangulation_topomesh.borders(3,t,3)) for t in draco.triangulation_topomesh.wisps(3)])
     draco_consistency = jaccard_index(image_tetrahedra, draco_tetrahedra)
 
-    print delaunay_consistency,' -> ',draco_consistency
+    # print delaunay_consistency,' -> ',draco_consistency
 
     assert draco_consistency == 1 or (draco_consistency >= 0.9 and draco_consistency > delaunay_consistency)
 

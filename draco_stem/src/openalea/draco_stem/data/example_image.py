@@ -44,7 +44,7 @@ def sphere_tissue_image(size=100, n_points=12):
     point_target_distance = np.power(point_target_area/np.pi,0.5)
 
     sigma_deformation = (size/100.)*(20./n_points)
-    omega_forces = dict(distance=0.1, repulsion=100.0)
+    omega_forces = dict(distance=0.1*size/100., repulsion=100.0*np.power(size/100.,2))
 
     for iterations in xrange(100):
         point_vectors = np.array([points[p]- points.values() for p in points.keys()])

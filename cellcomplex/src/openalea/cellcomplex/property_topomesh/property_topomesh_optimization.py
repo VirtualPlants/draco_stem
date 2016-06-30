@@ -45,7 +45,7 @@ def property_topomesh_vertices_deformation(topomesh,iterations=1,omega_forces=di
             print "--> Computing vertex force"
             assert gradient_derivatives != None
             gradient_force = property_topomesh_cell_vertex_force(topomesh,gradient_derivatives,resolution)
-            print gradient_force
+            # print gradient_force
             deformation_force += omega_forces['gradient']*gradient_force
             end_time = time()
             print "<-- Computing vertex force   [",end_time-start_time,"s]"
@@ -158,7 +158,7 @@ def property_topomesh_vertices_deformation(topomesh,iterations=1,omega_forces=di
         start_time = time()
         print "--> Applying Forces"
         deformation_force_amplitude = np.power(np.sum(np.power(deformation_force,2.0),axis=1),0.5)+np.power(10.,-8)
-        print deformation_force
+        # print deformation_force
         #deformation_force[np.where(deformation_force_amplitude>sigma_deformation)[0]] = sigma_deformation*deformation_force[np.where(deformation_force_amplitude>sigma_deformation)[0]]/deformation_force_amplitude[np.where(deformation_force_amplitude>sigma_deformation)[0]][:,np.newaxis]
         
         deformation_force = np.minimum(1.0,sigma_deformation/deformation_force_amplitude)[:,np.newaxis] * deformation_force
