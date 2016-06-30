@@ -1,2 +1,0 @@
-from openalea.container import PropertyTopomesh, array_dict
-from triangular_mesh import TriangularMesh
