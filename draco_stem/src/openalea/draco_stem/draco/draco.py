@@ -49,8 +49,7 @@ from openalea.draco_stem.draco.dual_reconstruction import tetrahedra_dual_triang
 
 
 class DracoMesh(object):
-    """
-    DRACO - Dual Reconstruction by Adjacency Complex Optimization
+    """DRACO - Dual Reconstruction by Adjacency Complex Optimization.
 
     Class constructing a PropertyTopomesh representing a segmented tissue SpatialImage by the dualization of an optimized adjacency complex
         --> Initialize with an image (file)
@@ -59,15 +58,21 @@ class DracoMesh(object):
     """
 
     def __init__(self, image=None, image_file=None, image_cell_vertex_file=None, triangulation_file=None, reconstruction_triangulation=['star','split','projected','flat']):
-        """
-        Initialize the DRACO object by providing a segmented image, specifying either :
-        * "image" : A (non-eroded) segmented label image (uint SpatialImage)
-        * "image_file" : A valid path to an image of readable type (.inr, .inr.gz, .tiff...) : 
-        Cell adjacency information will be extracted from image at initialization, still, some time can always be saved...
-        * "image_cell_vertex_file" : File to read from if cell-vertices have already been extracted
-        * "triangulation_file" : File to load from if an already existing adjacency complex (PropertyTopomesh) is to be used 
-        * "reconstruction_triangulation" : Default values for dual reconstruction triangulation 
-        (See dual_reconstruction for more details)
+        """Initialize the DRACO object by providing a segmented image.
+
+        Image can be passed either as an object of a filename. Cell adjacency information will be extracted from image 
+        at initialization, still, some time can always be saved: if previously extracted, it can be read from existing
+        file; if not the extrcted information will be saved in the specified files.
+
+        Args:
+            image (SpatialImage): a (non-eroded) segmented label image
+            image_file (str): a valid path to an image of readable type (.inr, .inr.gz, .tiff...) : 
+            image_cell_vertex_file (str): file to read from if cell-vertices have already been extracted
+            triangulation_file (str): file to load from if an already existing adjacency complex is to be used 
+            reconstruction_triangulation (list): default values for dual reconstruction triangulation (see dual_reconstruction for more details)
+
+        Returns:
+            None
         """
 
         if image is not None:
@@ -117,16 +122,23 @@ class DracoMesh(object):
 
 
     def compute_image_adjacency(self):
-        """
-        Compute the adjacency relationships between cells in the tissue image
-            • "image_graph" : Adjacency graph connecting adjacent cells by edges
-            . "image_cell_vertex" : Cell vertices representing 4 co-adjacent cells by the point where they meet
-            • "cell_layer" : Information whether the cell belong to the first layer of cells (L1), the second one (L2) or lower layers (0)
-            • "layer_edge_topomesh" : Adjacency graphs restricted to the L1 and L2 layers
-            • "layer_triangle_topomesh" : Adjacency triangles between L1 and L2 layers (**TO BE COMPLETED**)
+        """Compute the adjacency relationships between cells in the tissue image.
+
         By default, the DRACO adjacency complex is set to the cell_vertices tetrahedra (!!NOT A VALID CELL COMPLEX!!)
         !!STRONG RISK OF TOPOLOGICAL ERRORS IF DUALIZING AT THIS STAGE!!
+
+        Updates:
+            image_graph (PropertyGraph): adjacency graph connecting adjacent cells by edges
+            image_cell_vertex (dict): cell vertices representing 4 co-adjacent cells by the point where they meet
+            cell_layer (int): information whether the cell belong to the first layer of cells (L1), the second one (L2) or lower layers (0)
+            layer_edge_topomesh (PropertyTopomesh): adjacency graphs restricted to the L1 and L2 layers
+            layer_triangle_topomesh (PropertyTopomesh): adjacency triangles between L1 and L2 layers (**TO BE COMPLETED**)
+            triangulation_topomesh (PropertyTopomesh): the tetrahedra representing adjacencies between cells 
+
+        Returns:
+            None
         """
+
         self.image_graph = graph_from_image(self.segmented_image, spatio_temporal_properties=['volume','barycenter','L1'], ignore_cells_at_stack_margins=False, property_as_real=True)   
         self.image_labels = np.array(list(self.image_graph.vertices()))
         self.image_cell_volumes = array_dict([self.image_graph.vertex_property('volume')[v] for v in self.image_labels],self.image_labels)
@@ -196,16 +208,25 @@ class DracoMesh(object):
 
 
     def delaunay_adjacency_complex(self, surface_cleaning_criteria = ['surface','exterior','distance','sliver']):
-        """  
-        Estimate the adjacency complex by the Delaunay tetrahedrization of the cell barycenters.
-        Since Delaunay produces a convex simplicial complex, it is necessary to carve out the complex to keep the actual relevant simplices.
-        * "surface_cleaning_criteria" : the criteria used during the surface carving phase of the Delaunay complex :
-            • 'exterior' : remove surface simplices that lie entirely outside the tissue
-            • 'surface' : remove surface simplices that intersect the surface of the tissue
-            • 'distance' : remove surface simplices that link cells too far apart
-            • 'sliver' : remove surface simplices that create flat tetrahedra (slivers)
-        The DRACO adjacency complex is set to this Delaunay complex
-        """      
+        """Estimate the adjacency complex by the Delaunay tetrahedrization of the cell barycenters.
+
+        Since Delaunay applied on the cell barycenters would produce a convex simplicial complex, it is necessary 
+        to carve out the complex to keep only the actual relevant simplices.
+
+        Args:
+            surface_cleaning_criteria (list): the criteria used during the surface carving phase of the Delaunay complex :
+                • 'exterior' : remove surface simplices that lie entirely outside the tissue
+                • 'surface' : remove surface simplices that intersect the surface of the tissue
+                • 'distance' : remove surface simplices that link cells too far apart
+                • 'sliver' : remove surface simplices that create flat tetrahedra (slivers)
+
+        Updates:
+            triangulation_topomesh (PropertyTopomesh) : the DracoMesh adjacency complex is set to this Delaunay complex.
+
+        Returns:
+            None
+        """     
+
         clean_surface = len(surface_cleaning_criteria)>0
         self.delaunay_topomesh = delaunay_tetrahedrization_topomesh(self.positions, image_cell_vertex=self.image_cell_vertex, segmented_image=self.segmented_image, clean_surface=clean_surface, surface_cleaning_criteria=surface_cleaning_criteria)
         clean_tetrahedrization(self.delaunay_topomesh, clean_vertices=False)
@@ -216,16 +237,25 @@ class DracoMesh(object):
 
 
     def adjacency_complex_optimization(self, n_iterations = 1, omega_energies = {'image':10.0,'geometry':0.1,'adjacency':0.01}):
+        """Optimize the adjacency complex to match better the actual cell adjacencies in the tissue.
+
+        The optimization is performed as an iterative energy minimization process of local topological transformations 
+        (edge flips and triangle swaps) following a simulated annealing heuristic.
+
+        Args:
+            n_iterations (int): number of iterations (cycles of simulated annealing) to perform
+            omega_energies (dict): weights of the different terms of the energy functional :
+                • 'image' : energy measuring the difference between the adjacency complex simplices and the ones extracted from the image
+                • 'geometry' : energy penalizing irregular tetrahedra in the adjacency complex
+                • 'adjacency' : energy pulling the number of neighbors of each cell to an empirical optimal value according to its layer
+
+        Updates:
+            triangulation_topomesh (PropertyTopomesh) : the DracoMesh adjacency complex is set to this optimized complex.
+
+        Returns:
+            None
         """
-        Optimize the adjacency complex to match better the actual cell adjacencies in the tissue.
-        The optimization is performed as an iterative energy minimization process of local topological transformations following a simulated annealing heuristic.
-        * "n_iterations" : number of iterations (cycles of simulated annealing) to perform
-        * "omega_energies" : weights of the different terms of the energy functional :
-            • 'image' : energy measuring the difference between the adjacency complex simplices and the ones extracted from the image
-            • 'geometry' : energy penalizing irregular tetrahedra in the adjacency complex
-            • 'adjacency' : energy pulling the number of neighbors of each cell to an empirical optimal value according to its layer
-        The DRACO adjacency complex is set to this optimized complex
-        """
+
         self.optimized_delaunay_topomesh = deepcopy(self.delaunay_topomesh)
         compute_tetrahedrization_geometrical_properties(self.optimized_delaunay_topomesh)
         tetrahedrization_topomesh_add_exterior(self.optimized_delaunay_topomesh)
@@ -236,14 +266,20 @@ class DracoMesh(object):
 
 
     def layer_adjacency_complex(self, layer_name='L1', omega_criteria = {'distance':1.0,'wall_surface':2.0,'clique':10.0}):
-        """
-        Estimate a 2-D adjacency complex of a single cell layer by optimal simplex aggregation.
-        * "layer_name" : the cell layer considered ('L1' or 'L2')
-        * "omega_criteria" : weights of the criteria used to compute the weights of triangles in the aggregation process :
-            • 'distance' : penalize distant cells
-            • 'wall_surface' : give weight to large cell interfaces
-            • 'clique' : process uncertain configurations first
-        The DRACO adjacency is set to this constructed complex of degree 2
+        """Estimate a 2-D adjacency complex of a single cell layer by optimal simplex aggregation.
+
+        Args:
+            layer_name (str): the cell layer considered ('L1' or 'L2')
+            omega_criteria (dict): weights of the criteria used to compute the weights of triangles in the aggregation process :
+                • 'distance' : penalize distant cells
+                • 'wall_surface' : give weight to large cell interfaces
+                • 'clique' : process uncertain configurations first
+
+        Updates:
+            triangulation_topomesh (PropertyTopomesh) : the DracoMesh adjacency complex is set to this constructed complex of degree 2.
+
+        Returns:
+            None
         """
         layer_triangulation_topomesh = layer_triangle_topomesh_construction(self.layer_edge_topomesh[layer_name], self.positions, omega_criteria=omega_criteria, wall_surfaces=self.image_wall_surfaces, cell_volumes=self.image_cell_volumes)
         self.layer_triangle_topomesh[layer_name] = deepcopy(layer_triangulation_topomesh)
@@ -251,25 +287,38 @@ class DracoMesh(object):
 
 
     def construct_adjacency_complex(self, omega_criteria = {'distance':1.0,'wall_surface':2.0,'clique':10.0}):
-        """
-        Estimate a layered adjacency complex by optimal simplex aggregation.
-        * "omega_criteria" : weights of the criteria used to compute the weights of triangles in the aggregation process :
-            • 'distance' : penalize distant cells
-            • 'wall_surface' : give weight to large cell interfaces
-            • 'clique' : process uncertain configurations first
+        """Estimate a layered adjacency complex containing L1 and L2 cells by optimal simplex aggregation.
+
         !!ONLY IMPLEMENTED FOR THE L1_L2 ADJACENCY LAYER!! **TO BE COMPLETED**
-        The DRACO adjacency is set to this constructed complex
+
+        Args:
+            omega_criteria (dict): weights of the criteria used to compute the weights of triangles in the aggregation process :
+                • 'distance' : penalize distant cells
+                • 'wall_surface' : give weight to large cell interfaces
+                • 'clique' : process uncertain configurations first
+        
+        Updates:
+            triangulation_topomesh (PropertyTopomesh) : the DracoMesh adjacency complex is set to this constructed complex of degree 2.
+
+        Returns:
+            None
         """
+
         constructed_triangulation_topomesh = layered_tetrahedra_topomesh_construction(self.layer_triangle_topomesh['L1_L2'], self.positions, self.cell_layer, omega_criteria=omega_criteria, wall_surfaces=self.image_wall_surfaces, cell_volumes=self.image_cell_volumes)
         self.triangulation_topomesh = deepcopy(constructed_triangulation_topomesh)
 
 
     def mesh_image_surface(self, layers=[], resolution = 8):
+        """Compute a surface mesh of the tissue object in the image.
+
+        Args:
+            layers (list): values of the cell layers to consider when computing the surface (1, 2 or 0)
+            resolution (int): sampling step of the produced mesh
+        
+        Returns:
+            surface_topomesh (PropertyTopomesh): triangular mesh with no cell information representing the surface of the tissue
         """
-        Compute a surface mesh of the tissue object in the image
-        * "layers" : values of the cell layers to consider when computing the surface (1, 2 or 0)
-        * "resolution" : sampling step of the produced mesh
-        """
+
         grid_resolution = [resolution, resolution, resolution]
         binary_img = np.zeros(tuple(np.array(self.size*2,int)),np.uint8)
         if len(layers) == 0:
@@ -289,27 +338,35 @@ class DracoMesh(object):
 
 
     def dual_reconstruction(self, reconstruction_triangulation=None, adjacency_complex_degree=3, cell_vertex_constraint=True, maximal_edge_length=None):
-        """
-        Compute the dual geometry of the DRACO adjacency complex as a 3D interface mesh
-        * "reconstruction_triangulation" : parameters of the interface triangulation method :
-            • initial tirangulation (mandatory) : 'star' or 'delaunay'
-                - 'star' : a vertex is inserted at the center of the interface, creating star-arranged triangles
-                - 'delaunay' : the interface polygon is triangulated using Delaunay (!!ASSUMES INTERFACE IS CONVEX!!)
-            • triangulation refinement (optional) : 'split' or 'remeshed'
-                - 'split' : all the triangles are split into 4 new triangles with vertices inserted at the middle of the edges
-                - 'remeshed' : an isotropic remeshing algorithm is performed on the whole mesh
-            • geometrical optimization (optional, multiple choice) : 'regular', 'realistic', 'projected', 'flat', 'straight'
-                - 'regular' : optimize the quality of the triangles as much as possible (!!CELL SHAPES WON'T BE PRESERVED!!)
-                - 'realistic' : optimize the quality of the triangles while keeping plausible cell shapes (STEM optimization)
-                - 'projected' : project the exterior mesh vertices onto the actual object surface
-                - 'flat' : flatten all cell interfaces by projecting vertices on the interface median plane (3D complex required)
-                - 'straight' : straighten all cell boundaries by local laplacian operator (best for 2D complex)
-                - 'exact' : ensure cell vertices are well preserved during all geometrical optimization processes
+        """Compute the dual geometry of the DRACO adjacency complex as a 3D interface mesh.
+
+        Several options are possible for the interface triangulation:
+            - 'star' : a vertex is inserted at the center of the interface, creating star-arranged triangles
+            - 'delaunay' : the interface polygon is triangulated using Delaunay (!!ASSUMES INTERFACE IS CONVEX!!)
+            - 'split' : all the triangles are split into 4 new triangles with vertices inserted at the middle of the edges
+            - 'remeshed' : an isotropic remeshing algorithm is performed on the whole mesh
+            - 'regular' : optimize the quality of the triangles as much as possible (!!CELL SHAPES WON'T BE PRESERVED!!)
+            - 'realistic' : optimize the quality of the triangles while keeping plausible cell shapes (STEM optimization)
+            - 'projected' : project the exterior mesh vertices onto the actual object surface
+            - 'flat' : flatten all cell interfaces by projecting vertices on the interface median plane (3D complex required)
+            - 'straight' : straighten all cell boundaries by local laplacian operator (best for 2D complex)
+            - 'exact' : ensure cell vertices are well preserved during all geometrical optimization processes
             !!IF "reconstruction_triangulation" IS SET AS EMPTY A POLYGONAL INTERFACE MESH WILL BE RETURNED!!
-        * "adjacency_complex_degree" : 2 or 3, whether the adjacency complex is made of single layer triangles or tetrahedra
-        * "cell_vertex_constraint" : bool, whether the cell corners should be constrained to their position in the image or not
-        * "maximal_edge_length" : float, in micrometers, the maximal length for the remeshing algorithm
+
+        Args:
+            reconstruction_triangulation (list): parameters of the interface triangulation method :
+                • initial tirangulation (mandatory) : 'star' or 'delaunay'
+                • triangulation refinement (optional) : 'split' or 'remeshed'
+                • geometrical optimization (optional, multiple choice) : 'regular', 'realistic', 'projected', 'flat', 'straight'
+
+            adjacency_complex_degree (int): 2 or 3, whether the adjacency complex is made of single layer triangles or tetrahedra
+            cell_vertex_constraint (bool): whether the cell corners should be constrained to their position in the image or not
+            maximal_edge_length (float): in micrometers, the maximal length for the remeshing algorithm
+
+        Returns:
+            dual_reconstruction_topomesh (PropertyTopomesh): triangular mesh representing the cell geometry
         """
+        
         if reconstruction_triangulation is not None:
             self.reconstruction_triangulation = reconstruction_triangulation
 

@@ -7,12 +7,12 @@ Reference guide
 ###################################
 .. contents::
 
-.. currentmodule:: OpenAlea.draco_stem.__init__
+.. currentmodule:: openalea.draco_stem.__init__
 
 
-:mod:`OpenAlea.draco_stem` module
+:mod:`openalea.draco_stem` module
 ===============================================
-.. automodule:: OpenAlea.draco_stem.__init__
+.. automodule:: openalea.draco_stem.__init__
     :members:
     :undoc-members:
     :inherited-members:
