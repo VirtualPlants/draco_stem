@@ -1,3 +1,9 @@
 # {# pkglts, pysetup
 
 # #}
+
+numpy
+scipy
+openalea.image
+openalea.cellcomplex
+vplants.tissue_analysis
