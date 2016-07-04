@@ -10,8 +10,8 @@ DRACO-STEM
 Generating high-quality meshes of cell tissue from 3D segmented images
 ----------------------------------------------------------------------
 
-.. image:: 
-	https://github.com/VirtualPlants/draco_stem/blob/master/draco_stem/logo.png
+.. image:: https://github.com/VirtualPlants/draco_stem/blob/master/logo.png
+	:width: 300px
 
 Dual Reconstruction by Adjacency Complex Optimization (DRACO) - SAM Tissue Enhanced Mesh (STEM)
 
