@@ -6,23 +6,51 @@ DRACO-STEM
 
 .. #}
 
+----------------------------------------------------------------------
 Generating high-quality meshes of cell tissue from 3D segmented images
+----------------------------------------------------------------------
+
+.. image:: 
+	https://github.com/VirtualPlants/draco_stem/blob/master/draco_stem/logo.png
 
 Dual Reconstruction by Adjacency Complex Optimization (DRACO) - SAM Tissue Enhanced Mesh (STEM)
 
-OpenAlea library for the reconstruction of 3D meshes from segmented shoot apical meristem (SAM) tissue images
+Authors:
+--------
+* Guillaume Cerutti (guillaume.cerutti@inria.fr)
 
-<img src="https://github.com/gcerutti/draco-stem/blob/master/draco_stem/logo.png" width="300">
+
+Institutes:
+-----------
+* Inria (http://www.inria.fr)
+
+
+License: 
+--------
+* `Cecill-C`
+
+
+
+Description
+-----------
+
+OpenAlea library for the reconstruction of 3D meshes from segmented shoot apical meristem (SAM) tissue images.
+
+
+Requirements
+------------
+
+* NumPy / SciPy
+* OpenAlea.Image (https://github.com/openalea/openalea-components)
+* OpenAlea.CellComplex (https://github.com/VirtualPlants/cellcomplex)
+* VPlants.TissueAnalysis (https://github.com/VirtualPlants/tissue_analysis)
+
 
 Installation
-============
+------------
 
- * Install OpenAlea
- * Probably install Mars-Alt
+.. code-block:: python
 
-Dependencies
-============
+	python setup.py develop
 
- * NumPy
- * SciPy
 
