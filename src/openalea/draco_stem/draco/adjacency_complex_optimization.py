@@ -35,6 +35,7 @@ from openalea.container import array_dict, PropertyTopomesh
 from openalea.mesh.utils.tissue_analysis_tools import cell_vertex_extraction
 
 from openalea.mesh.property_topomesh_analysis import *
+from openalea.mesh.property_topomesh_extraction import clean_topomesh
 
 from openalea.mesh.utils.intersection_tools import inside_triangle, intersecting_segment, intersecting_triangle
 from openalea.mesh.utils.evaluation_tools import jaccard_index
@@ -748,6 +749,7 @@ def tetrahedrization_clean_surface(initial_triangulation_topomesh, image_cell_ve
         
         if 'sliver' in surface_cleaning_criteria:
             triangulation_triangle_sliver = array_dict(map(np.mean,triangulation_tetrahedra_eccentricities.values(triangulation_topomesh.wisp_property('cells',2).values())),list(triangulation_topomesh.wisps(2)))
+            # triangulation_triangle_sliver = array_dict(map(np.mean,triangulation_tetrahedra_eccentricities.values(triangulation_topomesh.wisp_property('cells',2).values())),list(triangulation_topomesh.wisps(2)))
             # surface_faces = np.array(list(triangulation_topomesh.wisps(2)))[np.array([len(list(triangulation_topomesh.regions(2,t)))==1 for t in triangulation_topomesh.wisps(2)])]
             # print (triangulation_triangle_sliver.values(surface_faces) > maximal_eccentricity).sum(), "(",maximal_eccentricity,")"
             # raw_input()
@@ -795,6 +797,8 @@ def tetrahedrization_clean_surface(initial_triangulation_topomesh, image_cell_ve
 
         n_triangles = triangulation_topomesh.nb_wisps(2)
         print n_triangles,"Triangles"
+
+        triangulation_topomesh = clean_topomesh(triangulation_topomesh)
 
         # compute_topomesh_property(triangulation_topomesh,'epidermis',2)
             
