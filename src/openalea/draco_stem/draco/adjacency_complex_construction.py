@@ -114,7 +114,9 @@ def layer_triangle_topomesh_construction(layer_edge_topomesh, positions, omega_c
                                 else:
                                     edge_neighbor_weights[e] = np.min(edge_weights.values(edge_future_triangle_edges))
             
-            free_edges = list(np.array(free_edges)[np.argsort(-edge_neighbor_weights.values(free_edges))])                    
+            print free_edges
+            if len(free_edges)>0:
+                free_edges = list(np.array(free_edges)[np.argsort(-edge_neighbor_weights.values(free_edges))])                    
         layer_triangulation_topomesh.update_wisp_property('barycenter',0,array_dict(positions.values(list(layer_triangulation_topomesh.wisps(0))),list(layer_triangulation_topomesh.wisps(0))))
     return layer_triangulation_topomesh
 
@@ -230,8 +232,10 @@ def layered_tetrahedra_topomesh_construction(layer_triangle_topomesh, positions,
                                             triangle_neighbor_weights[t] = np.min(triangle_weights.values(triangle_future_tetra_triangles)) - omega_criteria['clique']*(len(triangle_future_tetra_triangles)-4)
                                         else:
                                             triangle_neighbor_weights[t] = np.min(triangle_weights.values(triangle_future_tetra_triangles))
-                                            
-        free_triangles = list(np.array(free_triangles)[np.argsort(-triangle_neighbor_weights.values(free_triangles))])
+        
+        # print free_triangles
+        if len(free_triangles)>0:
+            free_triangles = list(np.array(free_triangles)[np.argsort(-triangle_neighbor_weights.values(free_triangles))])
         constructed_triangulation_topomesh.update_wisp_property('barycenter',0,array_dict(positions.values(list(constructed_triangulation_topomesh.wisps(0))),list(constructed_triangulation_topomesh.wisps(0))))
 
     return constructed_triangulation_topomesh
