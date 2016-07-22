@@ -3,7 +3,7 @@
     "coverage": "kuG6UnvgrxF9bJMhrsnY0hThsZ474pk0E+AgSaCsXgEtKm5GyCDH/YTprqpjbHcOlg2lsCMDGsa5GuIKnrpZNw=="
   }, 
   ".gitignore": {
-    "github": "E8Yr7ZonuoIVgMalSnEiuBvRsvQdsfSvYMGHvjOjPBPQth2B+YTADz0uZhCk9b+nj200f+lZE96bPAXJhhAkNA=="
+    "github": "wVVlsQPP65I5Gg6bW37JENFtYxO6Naq7x+mO0DaDGFVbMPk2o5QJ3DUwMoYfkOfou9lcR/6DC0MXr7hnrTWc9g=="
   }, 
   "AUTHORS.rst": {}, 
   "CONTRIBUTING.rst": {}, 
@@ -22,7 +22,7 @@
   }, 
   "doc/authors.rst": {}, 
   "doc/conf.py": {
-    "sphinx": "ilal2UhXqoIrDNiXdF5r6EKdlNI3Mn6Pd+TjJFy8Yg3TVtD77xWwn627RwHV2B+AmNt66mj7RyiUr0bb1+Jn9Q=="
+    "sphinx": "R/vQASAEGSInbuEJ/E0n6B/bCSha9v7g8a8wH7S6m/9ACFP0NxhVpB9m6JCUy9gXPmmqamhTkMP5AMqhXO6pZw=="
   }, 
   "doc/contributing.rst": {}, 
   "doc/history.rst": {}, 
@@ -34,13 +34,13 @@
   "doc/readme.rst": {}, 
   "doc/usage.rst": {}, 
   "dvlpt_requirements.txt": {
-    "pysetup": "3+3ypRIiSRJu4qfh2VRoDgFw8mgXrR5XArs2YhJ3pidji2TRU8cDtUExYqZUx6c3RNzLGGXkOTgnL+TtAfpObg=="
+    "pysetup": "UQJqyb7YIaBZSsbBzHa4g943V6w4PfULzPZwHKLPmkkKthgekqqdh4XqGpVjQrr3D9hF4m1qAu34UIT1ceUidw=="
   }, 
   "requirements.txt": {
     "pysetup": "z4PhNX7vuL3xVChQ1m2AB9Yg5AULVxXcg/SpIdNs6c5H0NE8XYXysP+DGNKHfuwvY7kxvUdBeoGlODJ6+SfaPg=="
   }, 
   "setup.cfg": {
-    "pysetup": "gPV9j/IJfYWSDltTDkDmyr+Fdt0g3/id+lICZS+27b3w/Usu80Xbu6wL8YI2e8yx8t0uMGGxKEj1ROfZWSzRwA=="
+    "pysetup": "pMgwvbdCkkgqDgv3Hfb0QaqUsLJ+ECFdRppb6HfsApSyJNNHilxkWSB1JexVe992ggNots7CBLSG6KKTD+GRfA=="
   }, 
   "setup.py": {
     "pysetup.call": "2wHuP94SpWKZpqOzExkQGTxnhGPgBHK3qOdPn0Ncstj5FkZ7FBGGM/inqAXaI4QLKQtTNlOUYRGSkYUWAUcf1w==", 

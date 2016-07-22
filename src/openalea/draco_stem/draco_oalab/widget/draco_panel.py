@@ -40,6 +40,9 @@ import os
 
 import openalea.draco_stem
 from openalea.draco_stem.draco import DracoMesh
+from openalea.draco_stem.draco.draco import draco_initialization
+from openalea.draco_stem.draco.draco import draco_delaunay_adjacency_complex, draco_layer_adjacency_complex, draco_construct_adjacency_complex
+from openalea.draco_stem.draco.draco import draco_adjacency_complex_optimization, draco_dual_reconstruction
 
 from openalea.image.serial.all import imread
 
@@ -107,13 +110,11 @@ class DracoPanel(QtGui.QWidget, AbstractListener):
 
         self._layout = QtGui.QVBoxLayout(self)
 
-
         self._title_img = QtGui.QWidget()
         title_layout = QtGui.QHBoxLayout(self._title_img)
 
         p = QtGui.QSizePolicy
         pixmap_dirname = shared_data(openalea.draco_stem)
-
 
         icon_img = QtGui.QLabel()
         pixmap_icon = QtGui.QPixmap(os.path.join(pixmap_dirname,"../../src/openalea/draco_stem/draco_oalab/widget/draco_icon.png"))
@@ -188,6 +189,7 @@ class DracoPanel(QtGui.QWidget, AbstractListener):
         self._view = weakref.ref(view)
         # self._view = view
         self._layout.addWidget(view)
+
         view.show()
         self.repaint()
 
@@ -259,12 +261,27 @@ class DracoPanel(QtGui.QWidget, AbstractListener):
                     self.world.remove(self.name+'_image_cells')
 
         elif control_name == 'display_adjacency':
+            control_names = [c['name'] for c in self._controls]
+            adjacency_complex = self._controls[control_names.index('adjacency_complex')]['value']
+            if adjacency_complex in ['delaunay','L1-L2']:
+                degree = 3
+            else:
+                degree = 2
+
             if new:
                 self.world.add(self.draco.triangulation_topomesh,self.name+'_adjacency_complex')
-                self.world[self.name+'_adjacency_complex_cells'].set_attribute('polydata_colormap',load_colormaps()['grey'])
-                self.world[self.name+'_adjacency_complex_cells'].set_attribute('intensity_range',(-1,0))
-                self.world[self.name+'_adjacency_complex'].set_attribute('coef_3',0.95)
-                self.world[self.name+'_adjacency_complex_cells'].set_attribute('display_colorbar',False)
+                if degree == 3:
+                    self.world[self.name+'_adjacency_complex_cells'].set_attribute('polydata_colormap',load_colormaps()['grey'])
+                    self.world[self.name+'_adjacency_complex_cells'].set_attribute('intensity_range',(-1,0))
+                    self.world[self.name+'_adjacency_complex'].set_attribute('coef_3',0.95)
+                    self.world[self.name+'_adjacency_complex_cells'].set_attribute('display_colorbar',False)
+                else:
+                    self.world[self.name+'_adjacency_complex'].set_attribute('display_3',False)
+                    self.world[self.name+'_adjacency_complex'].set_attribute('display_2',True)
+                    self.world[self.name+'_adjacency_complex_faces'].set_attribute('polydata_colormap',load_colormaps()['grey'])
+                    self.world[self.name+'_adjacency_complex_faces'].set_attribute('intensity_range',(-1,0))
+                    self.world[self.name+'_adjacency_complex'].set_attribute('coef_2',0.98)
+                    self.world[self.name+'_adjacency_complex_faces'].set_attribute('display_colorbar',False)
             else:
                 if self.world.has_key(self.name+'_adjacency_complex'):
                     self.world.remove(self.name+'_adjacency_complex')
@@ -294,9 +311,9 @@ class DracoPanel(QtGui.QWidget, AbstractListener):
         print "Initializing Draco Mesh : ",img_file,"(",self.name,")" 
 
         if cell_vertex_file != "":
-            self.draco = DracoMesh(image=None, image_file=img_file, image_cell_vertex_file=cell_vertex_file)
+            self.draco = draco_initialization(image=None, image_file=img_file, image_cell_vertex_file=cell_vertex_file)
         else:
-            self.draco = DracoMesh(image=None, image_file=img_file)
+            self.draco = draco_initialization(image=None, image_file=img_file)
 
         set_default_control(self._controls,'display_img')
         set_default_control(self._controls,'display_cells')
@@ -312,13 +329,13 @@ class DracoPanel(QtGui.QWidget, AbstractListener):
         print "Computing Adjacency Complex : ",adjacency_complex,"(",self.name,")" 
 
         if adjacency_complex == 'delaunay':
-            self.draco.delaunay_adjacency_complex(surface_cleaning_criteria = ['surface','sliver','distance'])
+            self.draco = draco_delaunay_adjacency_complex(self.draco, surface_cleaning_criteria=['surface','sliver','distance'])
         elif adjacency_complex == 'L1':
-            self.draco.layer_adjacency_complex('L1')
+            self.draco = draco_layer_adjacency_complex(self.draco, 'L1')
         elif adjacency_complex == 'L2':
-            self.draco.layer_adjacency_complex('L2')
+            self.draco = draco_layer_adjacency_complex(self.draco, 'L2')
         else:
-            self.draco.construct_adjacency_complex()
+            self.draco = draco_construct_adjacency_complex(self.draco)
 
         set_default_control(self._controls,'display_adjacency')
 
@@ -335,7 +352,7 @@ class DracoPanel(QtGui.QWidget, AbstractListener):
         adjacency_complex = self._controls[control_names.index('adjacency_complex')]['value']
 
         if adjacency_complex == 'delaunay':
-            self.draco.adjacency_complex_optimization(n_iterations=n_iterations)
+            self.draco = draco_adjacency_complex_optimization(self.draco, n_iterations=n_iterations)
 
         set_default_control(self._controls,'triangulation')
         set_default_control(self._controls,'dualize',value=self._dualize_button_pressed)
@@ -354,7 +371,7 @@ class DracoPanel(QtGui.QWidget, AbstractListener):
         else:
             degree = 2
         
-        self.draco.dual_reconstruction(reconstruction_triangulation=triangular, adjacency_complex_degree=degree)
+        self.draco = draco_dual_reconstruction(self.draco, reconstruction_triangulation=triangular, adjacency_complex_degree=degree)
 
         set_default_control(self._controls,'display_dual')        
         self.refresh_manager()

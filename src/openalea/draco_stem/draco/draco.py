@@ -420,9 +420,100 @@ class DracoMesh(object):
             self.adjacency_complex_optimization(n_iterations=3)
         return self.dual_reconstruction(reconstruction_triangulation)
 
+
 def create_draco_topomesh(image, n_iterations=3, reconstruction_triangulation=None):
+    """DRACO - Dual Reconstruction by Adjacency Complex Optimization.
+
+    Generate a PropertyTopomesh representing the cell tissue contained in a
+    segmented images by the dualization of an optimized adjacency complex.
+
+    Args:
+        image (:class:`openalea.image.SpatialImage`):
+            A segmented 3D image stack where tissue cells are represented as
+            connected labelled regions. Label 1 cooresponds to the exterior.
+        n_iterations (int):
+            The number of optimization passes on the adjacency complex.
+        reconstruction_triangulation (str, *optional*):
+            A string (or list of strings) containing the options for the interface triangulation among:
+                * *star* : a vertex is inserted at the center of the interface, creating star-arranged triangles
+                * *delaunay* : the interface polygon is triangulated using Delaunay (!!ASSUMES INTERFACE IS CONVEX!!)
+                * *split* : all the triangles are split into 4 new triangles with vertices inserted at the middle of the edges
+                * *remeshed* : an isotropic remeshing algorithm is performed on the whole mesh
+                * *regular* : optimize the quality of the triangles as much as possible (!!CELL SHAPES WON'T BE PRESERVED!!)
+                * *realistic* : optimize the quality of the triangles while keeping plausible cell shapes (STEM optimization)
+                * *projected* : project the exterior mesh vertices onto the actual object surface
+                * *flat* : flatten all cell interfaces by projecting vertices on the interface median plane (3D complex required)
+                * *straight* : straighten all cell boundaries by local laplacian operator (best for 2D complex)
+                * *exact* : ensure cell vertices are well preserved during all geometrical optimization processes
+
+    Returns:
+        dual_reconstruction_topomesh (:class:`openalea.mesh.PropertyTopomesh`):
+            The PropertyTopomesh representing the geometry of the tissue.
+
+    """
     draco = DracoMesh(image)
     return draco.draco_topomesh(n_iterations, reconstruction_triangulation)
+
+
+def draco_initialization(image=None, image_file=None, cell_vertex_file=None):
+    """Initialize the DRACO object by providing a segmented image.
+
+        Image can be passed either as an object of a filename. Cell adjacency information will be extracted from image 
+        at initialization, still, some time can always be saved: if previously extracted, it can be read from existing
+        file; if not the extrcted information will be saved in the specified files.
+
+        Args:
+            image (:class:`openalea.image.SpatialImage`): 
+                A (non-eroded) segmented label image.
+            image_file (str): 
+                A valid path to an image of readable type (.inr, .inr.gz, .tiff...).
+            image_cell_vertex_file (str): 
+                File to read from if cell-vertices have already been extracted.
+            triangulation_file (str)
+                File to load from if an already existing adjacency complex is to be used.
+            reconstruction_triangulation (str): 
+                Default values for dual reconstruction triangulation (see draco_dual_reconstruction for more details)
+
+        Returns:
+            draco (:class:`openalea.draco_stem.draco.DracoMesh`):
+                A DracoMesh containing adjacency information on the image cells.
+        """
+    return DracoMesh(image, image_file, cell_vertex_file)
+
+
+def draco_delaunay_adjacency_complex(input_draco, surface_cleaning_criteria = ['surface','exterior','distance','sliver']):
+    draco = deepcopy(input_draco)
+    draco.delaunay_adjacency_complex(surface_cleaning_criteria)
+    return draco
+
+
+def draco_layer_adjacency_complex(input_draco, layer_name='L1', omega_criteria = {'distance':1.0,'wall_surface':2.0,'clique':10.0}):
+    draco = deepcopy(input_draco)
+    draco.layer_adjacency_complex(layer_name, omega_criteria)
+    return draco
+
+
+def draco_construct_adjacency_complex(input_draco, omega_criteria = {'distance':1.0,'wall_surface':2.0,'clique':10.0}):
+    draco = deepcopy(input_draco)
+    draco.construct_adjacency_complex(omega_criteria)
+    return draco
+
+
+def draco_adjacency_complex_optimization(input_draco, n_iterations = 1, omega_energies = {'image':10.0,'geometry':0.1,'adjacency':0.01}):
+    draco = deepcopy(input_draco)
+    draco.adjacency_complex_optimization(n_iterations, omega_energies)
+    return draco
+
+
+def draco_dual_reconstruction(input_draco, reconstruction_triangulation=None, adjacency_complex_degree=3, cell_vertex_constraint=True, maximal_edge_length=None):
+    draco = deepcopy(input_draco)
+    draco.dual_reconstruction(reconstruction_triangulation, adjacency_complex_degree, cell_vertex_constraint, maximal_edge_length)
+    return draco
+
+def draco_segmented_image(draco):
+    return draco.segmented_image
+
+
 
 
 

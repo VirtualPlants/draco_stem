@@ -52,6 +52,7 @@ setup_kwds = dict(
 # #}
 # change setup_kwds below before the next pkglts tag
 
+setup_kwds['entry_points']['wralea'] = ['draco_stem = openalea.draco_stem_wralea']
 setup_kwds['entry_points']['oalab.applet'] = ['oalab.applet/draco = openalea.draco_stem.draco_oalab.plugin.applet']
 
 # do not change things below
