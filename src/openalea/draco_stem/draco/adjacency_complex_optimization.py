@@ -748,7 +748,10 @@ def tetrahedrization_clean_surface(initial_triangulation_topomesh, image_cell_ve
         compute_tetrahedrization_topological_properties(triangulation_topomesh)
         
         if 'sliver' in surface_cleaning_criteria:
-            triangulation_triangle_sliver = array_dict(map(np.mean,triangulation_tetrahedra_eccentricities.values(triangulation_topomesh.wisp_property('cells',2).values())),list(triangulation_topomesh.wisps(2)))
+            #print (np.array(map(len,triangulation_topomesh.wisp_property('cells',2).values()))==0).sum()
+            #print (np.array(map(len,triangulation_topomesh.wisp_property('cells',2).values(list(triangulation_topomesh.wisps(2)))))==0).sum()
+            #triangulation_triangle_sliver = array_dict(map(np.mean,triangulation_tetrahedra_eccentricities.values(triangulation_topomesh.wisp_property('cells',2).values())),list(triangulation_topomesh.wisps(2)))
+            triangulation_triangle_sliver = array_dict([np.mean(triangulation_tetrahedra_eccentricities.values(c)) if len(c)>0 else 0 for c in triangulation_topomesh.wisp_property('cells',2).values()],list(triangulation_topomesh.wisps(2)))
             # triangulation_triangle_sliver = array_dict(map(np.mean,triangulation_tetrahedra_eccentricities.values(triangulation_topomesh.wisp_property('cells',2).values())),list(triangulation_topomesh.wisps(2)))
             # surface_faces = np.array(list(triangulation_topomesh.wisps(2)))[np.array([len(list(triangulation_topomesh.regions(2,t)))==1 for t in triangulation_topomesh.wisps(2)])]
             # print (triangulation_triangle_sliver.values(surface_faces) > maximal_eccentricity).sum(), "(",maximal_eccentricity,")"
