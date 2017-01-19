@@ -3,6 +3,8 @@ from scipy import ndimage as nd
 
 from openalea.deploy.shared_data import shared_data
 
+import openalea.mesh.property_topomesh_io
+reload(openalea.mesh.property_topomesh_io)
 from openalea.mesh.property_topomesh_io import save_ply_property_topomesh, read_ply_property_topomesh
 
 from openalea.image.serial.all import imread, imsave
@@ -65,14 +67,32 @@ from openalea.container import array_dict
 world.add(img,"segmented_image",colormap='glasbey',alphamap='constant',bg_id=1,alpha=1.0)
 
 
+from openalea.cgal_meshing.idra import IdraMesh
+topomesh = IdraMesh(img,mesh_fineness=1.0).idra_topomesh()
+world.add(topomesh,'IDRA_mesh')
+
+idra_file = dirname+"/output_meshes/"+filename+"/"+filename+"_IDRA_mesh.ply"
+save_ply_property_topomesh(topomesh,idra_file,color_faces=True,colormap=load_colormaps()['glasbey'])
+
+from openalea.draco_stem.stem.tissue_mesh_optimization import optimize_topomesh
+
 #draco = DracoMesh(image=img, image_cell_vertex_file=cell_vertex_file, triangulation_file=triangulation_file)
 #draco = DracoMesh(image_file=inputfile, image_cell_vertex_file=cell_vertex_file)
 draco = DracoMesh(image=img)
+image_cell_vertex = draco.image_cell_vertex
+
+optimized_topomesh = optimize_topomesh(topomesh,omega_forces={'regularization':0.00,'neighborhood':0.0,'laplacian':1.0,'planarization':0.27,'epidermis_planarization':0.07,'convexity':0.02},omega_regularization_max=0.01,edge_flip=True,cell_vertex_motion=True,image_cell_vertex=image_cell_vertex)
+optimized_topomesh = optimize_topomesh(optimized_topomesh,omega_forces={'taubin_smoothing':0.65},cell_vertex_motion=True,image_cell_vertex=image_cell_vertex)
+world.add(optimized_topomesh,'IDRA_STEM_mesh')
+
+idra_stem_file = dirname+"/output_meshes/"+filename+"/"+filename+"_IDRA_STEM_mesh.ply"
+save_ply_property_topomesh(optimized_topomesh,idra_stem_file,color_faces=True,colormap=load_colormaps()['glasbey'])
+
 
 #world.add(draco.segmented_image-(draco.segmented_image==1),'segmented_image',colormap='glasbey',alphamap='constant',bg_id=0)
-world.add(draco.point_topomesh,'image_cells')
-world['image_cells_vertices'].set_attribute('point_radius',img.max())
-world.add(draco.layer_edge_topomesh['L1'],'L1_adjacency')
+#world.add(draco.point_topomesh,'image_cells')
+#world['image_cells_vertices'].set_attribute('point_radius',img.max())
+#world.add(draco.layer_edge_topomesh['L1'],'L1_adjacency')
 #world.add(draco.image_cell_vertex_topomesh,'image_cell_vertex')
 
 draco.delaunay_adjacency_complex(surface_cleaning_criteria = [])
@@ -80,23 +100,42 @@ draco.delaunay_adjacency_complex(surface_cleaning_criteria = [])
 
 draco.adjacency_complex_optimization(n_iterations=2)
 
-from copy import deepcopy
-triangulation_topomesh = deepcopy(draco.triangulation_topomesh)
-world.add(triangulation_topomesh,'cell_adjacency_complex')
-world['cell_adjacency_complex_cells'].set_attribute('polydata_colormap',load_colormaps()['grey'])
-world['cell_adjacency_complex_cells'].set_attribute('intensity_range',(-1,0))
-world['cell_adjacency_complex'].set_attribute('coef_3',0.95)#
-#world['cell_adjacency_complex_cells'].set_attribute('x_slice',(50,100))
-world['cell_adjacency_complex_cells'].set_attribute('display_colorbar',False)
+# from copy import deepcopy
+# triangulation_topomesh = deepcopy(draco.triangulation_topomesh)
+# world.add(triangulation_topomesh,'cell_adjacency_complex')
+# world['cell_adjacency_complex_cells'].set_attribute('polydata_colormap',load_colormaps()['grey'])
+# world['cell_adjacency_complex_cells'].set_attribute('intensity_range',(-1,0))
+# world['cell_adjacency_complex'].set_attribute('coef_3',0.95)#
+# #world['cell_adjacency_complex_cells'].set_attribute('x_slice',(50,100))
+# world['cell_adjacency_complex_cells'].set_attribute('display_colorbar',False)
 
-#triangular = ['star','remeshed','regular','projected']
-triangular = ['star','split']
-image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3)
+#triangular = ['star','remeshed','realistic','projected']
+#triangular = ['star','remeshed','realistic','projected','flat']
+triangular = ['star','remeshed']
+image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3, maximal_edge_length=5.1)
 #image_dual_topomesh = draco.draco_topomesh(reconstruction_triangulation = triangular)
+
+from openalea.cellcomplex.property_topomesh.property_topomesh_optimization import property_topomesh_vertices_deformation
+#property_topomesh_vertices_deformation(image_dual_topomesh,iterations=15)
+
 
 world.add(image_dual_topomesh ,'dual_reconstuction')
 
+
+draco_file = dirname+"/output_meshes/"+filename+"/"+filename+"_DRACO_mesh.ply"
+save_ply_property_topomesh(image_dual_topomesh,draco_file,color_faces=True,colormap=load_colormaps()['glasbey'])
+
+optimized_dual_topomesh = optimize_topomesh(image_dual_topomesh,omega_forces={'regularization':0.00,'neighborhood':0.65,'taubin_smoothing':0.65,'laplacian':0.7,'planarization':0.27,'epidermis_planarization':0.05,'convexity':0.06},omega_regularization_max=0.01,edge_flip=True,cell_vertex_motion=True,image_cell_vertex=image_cell_vertex)
+optimized_dual_topomesh = optimize_topomesh(optimized_dual_topomesh,omega_forces={'taubin_smoothing':0.65},cell_vertex_motion=True,image_cell_vertex=image_cell_vertex)
+world.add(optimized_dual_topomesh ,'dual_reconstuction')
+
+draco_stem_file = dirname+"/output_meshes/"+filename+"/"+filename+"_DRACO_STEM_mesh.ply"
+save_ply_property_topomesh(optimized_dual_topomesh,draco_stem_file,color_faces=True,colormap=load_colormaps()['glasbey'])
+
+
 from openalea.mesh.property_topomesh_extraction import epidermis_topomesh
+
+
 
 L1_topomesh = epidermis_topomesh(image_dual_topomesh)
 

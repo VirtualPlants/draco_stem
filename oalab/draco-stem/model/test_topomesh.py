@@ -13,9 +13,12 @@ from openalea.mesh.property_topomesh_io import save_ply_property_topomesh, read_
 from openalea.image.serial.all import imread
 from openalea.image.spatial_image import SpatialImage
 
-from openalea.mesh.property_topomesh_analysis import compute_topomesh_property, compute_topomesh_vertex_property_from_faces
+from openalea.mesh.property_topomesh_analysis import compute_topomesh_property, compute_topomesh_vertex_property_from_faces, compute_topomesh_cell_property_from_faces
 from openalea.mesh.property_topomesh_creation import vertex_topomesh, triangle_topomesh
 from openalea.mesh.utils.delaunay_tools import delaunay_triangulation
+
+import  openalea.mesh.property_topomesh_extraction
+reload(openalea.mesh.property_topomesh_extraction)
 from openalea.mesh.property_topomesh_extraction import clean_topomesh
 
 from openalea.oalab.colormap.colormap_def import load_colormaps
@@ -25,8 +28,24 @@ from copy import deepcopy
 
 world.clear() 
 
-filename = "/Users/gcerutti/Developpement/openalea/openalea_meshing_data/share/data/output_meshes/p194-t5_imgSeg_SegExp_CellShapeCorr/p194-t5_imgSeg_SegExp_CellShapeCorr_triangulated_L1_L2_star_remeshed_projected_flat_temporal_properties_topomesh.pkl"
+#filename = "/Users/gcerutti/Developpement/openalea/openalea_meshing_data/share/data/output_meshes/p194-t5_imgSeg_SegExp_CellShapeCorr/p194-t5_imgSeg_SegExp_CellShapeCorr_triangulated_L1_L2_star_remeshed_projected_flat_temporal_properties_topomesh.pkl"
+filename = "/Users/gcerutti/Developpement/openalea/openalea_meshing_data/share/data/output_meshes/p194-t5_imgSeg_SegExp_CellShapeCorr/p194-t5_imgSeg_SegExp_CellShapeCorr_triangulated_L1_star_remeshed_straight_temporal_properties_topomesh.pkl"
 topomesh = pickle.load(open(filename,'r'))
+
+topomesh = clean_topomesh(topomesh, clean_properties=True)
+
+compute_topomesh_property(topomesh,'length',degree=1)
+compute_topomesh_property(topomesh,'area',degree=2)
+compute_topomesh_property(topomesh,'barycenter',degree=2)
+compute_topomesh_property(topomesh,'normal',2,normal_method='orientation')
+#compute_topomesh_property(topomesh,'normal',0)
+compute_topomesh_vertex_property_from_faces(topomesh,'normal',weighting='area',adjacency_sigma=1.2,neighborhood=3)
+#topomesh.update_wisp_property('normal',0,topomesh.wisp_property('barycenter',0).values()/ np.linalg.norm(topomesh.wisp_property('barycenter',0).values(),axis=1)[:,np.newaxis],list(topomesh.wisps(0)))
+compute_topomesh_property(topomesh,'mean_curvature',2)
+compute_topomesh_cell_property_from_faces(topomesh,'principal_curvature_tensor')
+
+world.add(topomesh,'topomesh')
+
 
 def topomesh_to_dataframe(topomesh, degree=3, properties=None):
     import pandas as pd
