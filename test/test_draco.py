@@ -70,5 +70,29 @@ def test_draco():
         assert np.isclose(image_volumes[c],draco_volumes[c],0.33)
 
 
+def test_draco_layer():
+    n_points = 12
+    img = sphere_tissue_image(size=100,n_points=n_points)
+
+    draco = DracoMesh(img)
+
+    draco.layer_adjacency_complex()
+
+    triangular = ['star','remeshed','straight','regular',]
+    image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=2)
+
+def test_draco_two_layers():
+    n_points = 12
+    img = sphere_tissue_image(size=100,n_points=n_points)
+
+    draco = DracoMesh(img)
+
+    draco.construct_adjacency_complex()
+
+    triangular = ['star','remeshed','projected','regular','flat']
+    image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3)
+
+
+
 
 

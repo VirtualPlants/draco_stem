@@ -194,17 +194,18 @@ class DracoMesh(object):
 
         self.layer_triangle_topomesh = {}
 
-
-        if (self.cell_layer.values() == 1).sum() > 1 and (self.cell_layer.values() == 2).sum() > 1:
+        if (self.cell_layer.values() == 1).sum() > 1 and (self.cell_layer.values() == 2).sum() > 0:
             L1_L2_edges = np.array([[(c,n) for n in self.image_graph.neighbors(c) if n>1 and self.cell_layer[n] in [1,2]] for c in self.cell_layer.keys() if self.cell_layer[c] in [1,2]])
             L1_L2_edges = np.concatenate([e for e in L1_L2_edges if len(e)>0])
             L1_L2_edges = L1_L2_edges[L1_L2_edges[:,1]>L1_L2_edges[:,0]]
 
             L1_L2_additional_edges = np.array([[(c,n) for n in np.unique(np.array(self.image_cell_vertex.keys())[np.where(np.array(self.image_cell_vertex.keys())==c)[0]])  if n>1 and n!=c and (n not in self.image_graph.neighbors(c)) and (self.cell_layer[n] in [1,2])] for c in self.cell_layer.keys() if self.cell_layer[c] in [1,2]])
-            L1_L2_additional_edges = np.concatenate([e for e in L1_L2_additional_edges if len(e)>0])
-            L1_L2_additional_edges = L1_L2_additional_edges[L1_L2_additional_edges[:,1]>L1_L2_additional_edges[:,0]]
+            if len([e for e in L1_L2_additional_edges if len(e)>0])>0:
+                L1_L2_additional_edges = np.concatenate([e for e in L1_L2_additional_edges if len(e)>0])
+                L1_L2_additional_edges = L1_L2_additional_edges[L1_L2_additional_edges[:,1]>L1_L2_additional_edges[:,0]]
+                L1_L2_edges = np.concatenate([L1_L2_edges,L1_L2_additional_edges])
 
-            self.layer_triangle_topomesh['L1_L2'] =  triangle_topomesh(triangles_from_adjacency_edges(np.concatenate([L1_L2_edges,L1_L2_additional_edges])),self.positions)
+            self.layer_triangle_topomesh['L1_L2'] =  triangle_topomesh(triangles_from_adjacency_edges(L1_L2_edges),self.positions)
 
 
     def delaunay_adjacency_complex(self, surface_cleaning_criteria = ['surface','exterior','distance','sliver']):
