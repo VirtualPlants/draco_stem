@@ -1,6 +1,5 @@
 #<p style="text-align: center;">DRACO-STEM</p>
 
-------
 
 <p style="text-align: center;">
 
