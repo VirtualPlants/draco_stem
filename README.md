@@ -32,6 +32,6 @@ OpenAlea library for the reconstruction of 3D meshes from segmented shoot apical
 
 ###Installation
 
-[Procedure *via* **conda**](wiki/installation)
+[Procedure *via* **conda**](https://github.com/VirtualPlants/draco_stem/wiki/Installation)
 
 
