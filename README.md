@@ -20,7 +20,7 @@
 
 
 ###Institutes:
-* Inria (http://www.inria.fr)
+* [<image src=https://www.inria.fr/extension/site_inria/design/site_inria/images/logos/logo_INRIA.png width=100>](http://www.inria.fr)
 
 
 ###License: 
