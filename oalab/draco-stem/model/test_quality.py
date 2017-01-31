@@ -52,5 +52,17 @@ figure.set_size_inches(32,24)
 figure.gca().axis('off')
 figure.savefig('/Users/gcerutti/Desktop/DRACO-STEM/Table.png')
 
+from scipy.stats import f_oneway
+
+
+quality_criterion = 'Triangle Eccenticity'
+method1 = 'Draco-Stem+'
+method2 = 'Idra-Stem'
+method1_quality = quality_data[quality_data['Method']==method1][quality_criterion].values
+method2_quality = quality_data[quality_data['Method']==method2][quality_criterion].values
+anova = f_oneway(method1_quality,method2_quality)
+print quality_criterion," - ",method1,":",method1_quality.mean()," -> ",method2,":",method2_quality.mean(),':',anova
+
+
 
 
