@@ -24,16 +24,18 @@ from openalea.draco_stem.example_image import sphere_tissue_image
 
 world.clear()
 
-import vplants.meshing_data
+#import vplants.meshing_data
 #filename = "p194-t3_imgSeg_SegExp_CellShapeCorr"
 #filename = "rs01_wt_t00_seg"
 #filename = "segmentation"
 #filename = "olli01_lti6b_150421_sam01_t000_seg_hmin_2"
-filename = "sphere_cells"
+#filename = "sphere_cells"
+filename = "yr02_t132_seg"
 
 
-dirname = shared_data(vplants.meshing_data)
-meshing_dirname =  dirname.parent.parent
+dirname = '/Users/gcerutti/Developpement/openalea/openalea_meshing_data/share/data/'
+#dirname = shared_data(vplants.meshing_data)
+#meshing_dirname =  dirname.parent.parent
 
 import os
 if not os.path.exists(dirname+"/output_meshes/"+filename):
@@ -42,22 +44,9 @@ if not os.path.exists(dirname+"/output_meshes/"+filename):
 inputfile = dirname+"/segmented_images/"+filename+".inr.gz"
 
 
-
-size = 100.
-#n_points = int((4.*np.power(size/4.,2.))/(np.power(15.,2)))
-n_points = 21
-print size," -> ",n_points
-
-img = sphere_tissue_image(size=size, n_points=n_points)
-
-imsave(inputfile,img)
-
-#inputfile = "/Users/gcerutti/Developpement/openalea/openalea_marsalt/example/time_0_cut_seg_median.inr" 
-
 img = imread(inputfile)
 #img[img==0]=1
 #img = SpatialImage(np.concatenate([img[:,:,35:],np.ones((img.shape[0],img.shape[1],5))],axis=2).astype(np.uint16),resolution=img.resolution)
-
 
 cell_vertex_file = dirname+"/output_meshes/"+filename+"/image_cell_vertex.dict"
 triangulation_file = dirname+"/output_meshes/"+filename+"/"+filename+"_draco_adjacency_complex.pkl"
@@ -67,26 +56,26 @@ from openalea.container import array_dict
 world.add(img,"segmented_image",colormap='glasbey',alphamap='constant',bg_id=1,alpha=1.0)
 
 
-from openalea.cgal_meshing.idra import IdraMesh
-topomesh = IdraMesh(img,mesh_fineness=1.0).idra_topomesh()
-world.add(topomesh,'IDRA_mesh')
+#from openalea.cgal_meshing.idra import IdraMesh
+#topomesh = IdraMesh(img,mesh_fineness=1.0).idra_topomesh()
+#world.add(topomesh,'IDRA_mesh')
 
-idra_file = dirname+"/output_meshes/"+filename+"/"+filename+"_IDRA_mesh.ply"
-save_ply_property_topomesh(topomesh,idra_file,color_faces=True,colormap=load_colormaps()['glasbey'])
+#idra_file = dirname+"/output_meshes/"+filename+"/"+filename+"_IDRA_mesh.ply"
+#save_ply_property_topomesh(topomesh,idra_file,color_faces=True,colormap=load_colormaps()['glasbey'])
 
-from openalea.draco_stem.stem.tissue_mesh_optimization import optimize_topomesh
+#from openalea.draco_stem.stem.tissue_mesh_optimization import optimize_topomesh
 
 #draco = DracoMesh(image=img, image_cell_vertex_file=cell_vertex_file, triangulation_file=triangulation_file)
-#draco = DracoMesh(image_file=inputfile, image_cell_vertex_file=cell_vertex_file)
-draco = DracoMesh(image=img)
+draco = DracoMesh(image_file=inputfile, image_cell_vertex_file=cell_vertex_file, triangulation_file=triangulation_file)
+#draco = DracoMesh(image=img)
 image_cell_vertex = draco.image_cell_vertex
 
-optimized_topomesh = optimize_topomesh(topomesh,omega_forces={'regularization':0.00,'neighborhood':0.0,'laplacian':1.0,'planarization':0.27,'epidermis_planarization':0.07,'convexity':0.02},omega_regularization_max=0.01,edge_flip=True,cell_vertex_motion=True,image_cell_vertex=image_cell_vertex)
-optimized_topomesh = optimize_topomesh(optimized_topomesh,omega_forces={'taubin_smoothing':0.65},cell_vertex_motion=True,image_cell_vertex=image_cell_vertex)
-world.add(optimized_topomesh,'IDRA_STEM_mesh')
+#optimized_topomesh = optimize_topomesh(topomesh,omega_forces={'regularization':0.00,'neighborhood':0.0,'laplacian':1.0,'planarization':0.27,'epidermis_planarization':0.07,'convexity':0.02},omega_regularization_max=0.01,edge_flip=True,cell_vertex_motion=True,image_cell_vertex=image_cell_vertex)
+#optimized_topomesh = optimize_topomesh(optimized_topomesh,omega_forces={'taubin_smoothing':0.65},cell_vertex_motion=True,image_cell_vertex=image_cell_vertex)
+#world.add(optimized_topomesh,'IDRA_STEM_mesh')
 
-idra_stem_file = dirname+"/output_meshes/"+filename+"/"+filename+"_IDRA_STEM_mesh.ply"
-save_ply_property_topomesh(optimized_topomesh,idra_stem_file,color_faces=True,colormap=load_colormaps()['glasbey'])
+#idra_stem_file = dirname+"/output_meshes/"+filename+"/"+filename+"_IDRA_STEM_mesh.ply"
+#save_ply_property_topomesh(optimized_topomesh,idra_stem_file,color_faces=True,colormap=load_colormaps()['glasbey'])
 
 
 #world.add(draco.segmented_image-(draco.segmented_image==1),'segmented_image',colormap='glasbey',alphamap='constant',bg_id=0)
@@ -95,10 +84,11 @@ save_ply_property_topomesh(optimized_topomesh,idra_stem_file,color_faces=True,co
 #world.add(draco.layer_edge_topomesh['L1'],'L1_adjacency')
 #world.add(draco.image_cell_vertex_topomesh,'image_cell_vertex')
 
-draco.delaunay_adjacency_complex(surface_cleaning_criteria = [])
+#draco.delaunay_adjacency_complex(surface_cleaning_criteria = [])
 #draco.delaunay_adjacency_complex(surface_cleaning_criteria = ['surface','sliver','distance'])
 
-draco.adjacency_complex_optimization(n_iterations=2)
+#draco.adjacency_complex_optimization(n_iterations=2)
+
 
 # from copy import deepcopy
 # triangulation_topomesh = deepcopy(draco.triangulation_topomesh)
