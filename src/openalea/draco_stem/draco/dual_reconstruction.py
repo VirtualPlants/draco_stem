@@ -387,7 +387,7 @@ def tetrahedra_dual_triangular_topomesh(triangulation_topomesh,image_cell_vertex
     surface_topomesh = kwargs.get('surface_topomesh',None)
 
     vertex_motion = kwargs.get('vertex_motion',False)
-    resolution = kwargs.get('resolution',(1.0,1.0,1.0))
+    voxelsize = kwargs.get('voxelsize',(1.0,1.0,1.0))
 
     image_topomesh = tetrahedra_dual_topomesh(triangulation_tetrahedra,positions,voronoi=voronoi,exterior=exterior,surface_topomesh=surface_topomesh)
 
@@ -476,13 +476,13 @@ def tetrahedra_dual_triangular_topomesh(triangulation_topomesh,image_cell_vertex
             while (n_flips+n_splits > image_triangular_topomesh.nb_wisps(1)/100.) and (iterations<max_iterations):
                 n_splits = property_topomesh_edge_split_optimization(image_triangular_topomesh, maximal_length=maximal_length, iterations=1)
                 n_flips = property_topomesh_edge_flip_optimization(image_triangular_topomesh,omega_energies=dict([('neighborhood',0.65)]),simulated_annealing=False,iterations=3)
-                image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.33)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10-iterations,iterations_per_step=1)
+                image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.33)]),omega_regularization_max=0.0,gradient_derivatives=None,image_voxelsize=voxelsize,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10-iterations,iterations_per_step=1)
                 iterations += 1
         
         if 'realistic' in triangular:
-            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=20,iterations_per_step=1)   
+            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_voxelsize=voxelsize,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=20,iterations_per_step=1)   
         elif 'regular' in triangular:
-            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65),('convexity',0.02)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=False,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=50,iterations_per_step=1)   
+            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65),('convexity',0.02)]),omega_regularization_max=0.0,gradient_derivatives=None,image_voxelsize=voxelsize,cell_vertex_motion=False,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=50,iterations_per_step=1)   
 
         if 'projected' in triangular and surface_topomesh is not None:
             compute_topomesh_property(image_triangular_topomesh,'normal',2,object_positions=triangulation_topomesh.wisp_property('barycenter',0))
@@ -502,13 +502,13 @@ def tetrahedra_dual_triangular_topomesh(triangulation_topomesh,image_cell_vertex
                 projected_positions[v] = vertex_positions[v] + 0.5*(1-np.tanh(2.0*(surface_distance-5.0)))*(surface_distance*vertex_normals[v])
             image_triangular_topomesh.update_wisp_property('barycenter',0,array_dict([projected_positions[v] if projected_positions.has_key(v) else vertex_positions[v] for v in image_triangular_topomesh.wisps(0)],list(image_triangular_topomesh.wisps(0))))
 
-            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10,iterations_per_step=1)   
+            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_voxelsize=voxelsize,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10,iterations_per_step=1)   
         
         if 'flat' in triangular:
             image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65),('planarization',0.1),('epidermis_planarization',0.1)]),omega_regularization_max=0.0,gradient_derivatives=None,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10,iterations_per_step=1)   
         elif 'straight' in triangular:
             image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65),('laplacian',0.5),('epidermis_planarization',0.1)]),omega_regularization_max=0.0,gradient_derivatives=None,cell_vertex_motion=True,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=10,iterations_per_step=1)   
-            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_resolution=resolution,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=3,iterations_per_step=1)   
+            image_triangular_topomesh = optimize_topomesh(image_triangular_topomesh,omega_forces=dict([('taubin_smoothing',0.65)]),omega_regularization_max=0.0,gradient_derivatives=None,image_voxelsize=voxelsize,cell_vertex_motion=vertex_preserving,image_cell_vertex=image_cell_vertex,edge_flip=False,display=False,iterations=3,iterations_per_step=1)   
 
         try:
             return image_triangular_topomesh

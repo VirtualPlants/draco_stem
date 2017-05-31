@@ -62,7 +62,7 @@ def test_draco():
     triangular = ['star','remeshed','projected','regular','flat']
     image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3)
 
-    image_volumes = array_dict(nd.sum(np.ones_like(img),img,index=np.unique(img)[1:])*np.prod(img.resolution),np.unique(img)[1:])
+    image_volumes = array_dict(nd.sum(np.ones_like(img),img,index=np.unique(img)[1:])*np.prod(img.voxelsize),np.unique(img)[1:])
     compute_topomesh_property(image_dual_topomesh,'volume',3)
     draco_volumes = image_dual_topomesh.wisp_property('volume',3)
 

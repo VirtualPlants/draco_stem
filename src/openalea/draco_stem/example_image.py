@@ -76,7 +76,7 @@ def sphere_tissue_image(size=100, n_points=12):
     img = np.ones((size,size,size),np.uint8)
     img[tuple(np.transpose(coords))] = labels
     img[tuple(np.transpose(ext_coords))] = 1
-    img = SpatialImage(img,resolution=(60./size,60./size,60./size))
+    img = SpatialImage(img,voxelsize=(60./size,60./size,60./size))
 
     return img
 
@@ -100,7 +100,7 @@ def cube_image(size=50):
 
     img[tuple(np.transpose(coords))] = labels
     #img[tuple(np.transpose(ext_coords))] = 1
-    img = SpatialImage(img,resolution=(1,1,1))
+    img = SpatialImage(img,voxelsize=(1,1,1))
 
     return img
 

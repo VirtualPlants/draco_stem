@@ -96,7 +96,7 @@ def optimize_topomesh(input_topomesh,omega_forces={'regularization':0.00,'laplac
     if cell_vertex_motion:
         image_cell_vertex = deepcopy(kwargs.get("image_cell_vertex",{}))
         for v in image_cell_vertex.keys():
-            image_cell_vertex[v] = image_cell_vertex[v]*np.array(kwargs.get("image_resolution",(1.0,1.0,1.0)))
+            image_cell_vertex[v] = image_cell_vertex[v]*np.array(kwargs.get("image_voxelsize",(1.0,1.0,1.0)))
             #image_cell_vertex[v] = image_cell_vertex[v]
     
         compute_topomesh_property(topomesh,'cells',degree=0)
@@ -147,7 +147,7 @@ def optimize_topomesh(input_topomesh,omega_forces={'regularization':0.00,'laplac
         for i,v in enumerate(matched_mesh_vertices):
             if not np.isnan(matched_image_cell_vertex[i]).any():
                 final_vertex_positions[v] = matched_image_cell_vertex[i]
-                print topomesh.wisp_property('barycenter',0)[v]," -> ",final_vertex_positions[v]
+                # print topomesh.wisp_property('barycenter',0)[v]," -> ",final_vertex_positions[v]
                 fixed_vertex[v] = True
         matched_mesh_vertices = final_vertex_positions.keys()
 
@@ -170,7 +170,7 @@ def optimize_topomesh(input_topomesh,omega_forces={'regularization':0.00,'laplac
         gaussian_sigma = kwargs.get('gaussian_sigma',10.0)
         target_areas = kwargs.get('target_areas',None)
 
-        property_topomesh_vertices_deformation(topomesh,iterations=iterations_per_step,omega_forces=omega_forces,sigma_deformation=sigma_deformation,gradient_derivatives=gradient_derivatives,resolution=kwargs.get("image_resolution",(1.0,1.0,1.0)),gaussian_sigma=gaussian_sigma,target_areas=target_areas)
+        property_topomesh_vertices_deformation(topomesh,iterations=iterations_per_step,omega_forces=omega_forces,sigma_deformation=sigma_deformation,gradient_derivatives=gradient_derivatives,voxelsize=kwargs.get("image_voxelsize",(1.0,1.0,1.0)),gaussian_sigma=gaussian_sigma,target_areas=target_areas)
 
         if cell_vertex_motion:
             vertex_start_time = time()

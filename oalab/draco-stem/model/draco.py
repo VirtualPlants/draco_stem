@@ -46,7 +46,7 @@ inputfile = dirname+"/segmented_images/"+filename+".inr.gz"
 
 img = imread(inputfile)
 #img[img==0]=1
-#img = SpatialImage(np.concatenate([img[:,:,35:],np.ones((img.shape[0],img.shape[1],5))],axis=2).astype(np.uint16),resolution=img.resolution)
+#img = SpatialImage(np.concatenate([img[:,:,35:],np.ones((img.shape[0],img.shape[1],5))],axis=2).astype(np.uint16),voxelsize=img.voxelsize)
 
 cell_vertex_file = dirname+"/output_meshes/"+filename+"/image_cell_vertex.dict"
 triangulation_file = dirname+"/output_meshes/"+filename+"/"+filename+"_draco_adjacency_complex.pkl"
@@ -132,11 +132,11 @@ L1_topomesh = epidermis_topomesh(image_dual_topomesh)
 world.add(L1_topomesh ,'dual_reconstuction')
 
 
-center = np.array([size/2,size/2,size/2],float)*np.array(img.resolution)
+center = np.array([size/2,size/2,size/2],float)*np.array(img.voxelsize)
     
 positions = L1_topomesh.wisp_property('barycenter',0)
 for p in L1_topomesh.wisps(0):
-    positions[p] = center + (size/3.)*np.array(img.resolution)*(positions[p]-center)/np.linalg.norm(positions[p]-center)
+    positions[p] = center + (size/3.)*np.array(img.voxelsize)*(positions[p]-center)/np.linalg.norm(positions[p]-center)
     
 L1_topomesh.update_wisp_property('barycenter',0,positions)
 world.add(L1_topomesh ,'dual_reconstuction')
@@ -337,7 +337,7 @@ raw_input()
 
 # raw_file = "/Users/gcerutti/Developpement/openalea/openalea_meshing_data/share/data/nuclei_images/olli01_lti6b_150421_sam01_t000/olli01_lti6b_150421_sam01_t000_PIN.inr.gz"
 # raw_img = imread(raw_file)
-# raw_img = SpatialImage(np.concatenate([raw_img[:,:,35:],np.ones((raw_img.shape[0],raw_img.shape[1],5))],axis=2).astype(np.uint16),resolution=raw_img.resolution)
+# raw_img = SpatialImage(np.concatenate([raw_img[:,:,35:],np.ones((raw_img.shape[0],raw_img.shape[1],5))],axis=2).astype(np.uint16),voxelsize=raw_img.voxelsize)
 # world.add(raw_img,"raw_image")
 
 

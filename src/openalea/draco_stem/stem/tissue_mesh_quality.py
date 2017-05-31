@@ -214,12 +214,12 @@ def evaluate_topomesh_quality(topomesh,quality_criteria=["Mesh Complexity","Tria
         else:
             image_cell_vertex = deepcopy(image_cell_vertex)
         # for v in image_cell_vertex.keys():
-        #     image_cell_vertex[v] = image_cell_vertex[v]*np.array(image.resolution)
+        #     image_cell_vertex[v] = image_cell_vertex[v]*np.array(image.voxelsize)
     
         image_cell_vertices = np.array(image_cell_vertex.values())
-        print mesh_cell_vertices[np.where(1-np.isnan(mesh_cell_vertices)[:,0])]*image.resolution
-        print image_cell_vertices*image.resolution
-        vertex_distances_mesh = array_dict(vq(mesh_cell_vertices[np.where(1-np.isnan(mesh_cell_vertices)[:,0])]*image.resolution,image_cell_vertices*image.resolution)[1],cell_vertex)
+        print mesh_cell_vertices[np.where(1-np.isnan(mesh_cell_vertices)[:,0])]*image.voxelsize
+        print image_cell_vertices*image.voxelsize
+        vertex_distances_mesh = array_dict(vq(mesh_cell_vertices[np.where(1-np.isnan(mesh_cell_vertices)[:,0])]*image.voxelsize,image_cell_vertices*image.voxelsize)[1],cell_vertex)
         vertex_distances_image = vq(image_cell_vertices[np.where(1-np.isnan(image_cell_vertices)[:,0])],mesh_cell_vertices)[1]
 
         # quality_data["Vertex Distance"] = np.sqrt(3)/(np.maximum(np.sqrt(3),vertex_distances_image.mean()))

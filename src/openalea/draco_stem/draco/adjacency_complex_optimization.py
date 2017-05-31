@@ -74,7 +74,7 @@ def tetrahedra_from_triangulation(triangulation_triangles,positions,exterior=Tru
     corresponding_tetrahedra_2 = vq(np.concatenate([triangulation_tetrahedra[:,:1],triangulation_tetrahedra[:,2:]],axis=1),triangulation_triangles)
     corresponding_tetrahedra_3 = vq(np.concatenate([triangulation_tetrahedra[:,:2],triangulation_tetrahedra[:,3:]],axis=1),triangulation_triangles)
     triangulation_tetrahedra = triangulation_tetrahedra[np.where((corresponding_tetrahedra_1[1] == 0)&(corresponding_tetrahedra_2[1] == 0)&(corresponding_tetrahedra_3[1] == 0))]
-    print triangulation_tetrahedra.shape[0]," cell vertices"
+    # print triangulation_tetrahedra.shape[0]," cell vertices"
 
     if triangulation_tetrahedra.shape[0]>0:
         triangulation_5_cliques = np.concatenate([[tuple(c)+(n,) for n in triangulation_tetrahedra[:,3][np.where((triangulation_tetrahedra[:,0] == c[0])&(triangulation_tetrahedra[:,1] == c[1])&(triangulation_tetrahedra[:,2] == c[2]))]] for c in triangulation_tetrahedra],axis=0)
@@ -107,7 +107,7 @@ def tetrahedra_from_triangulation(triangulation_triangles,positions,exterior=Tru
         triangulation_5_cliques = np.concatenate([[tuple(c)+(n,) for n in triangulation_tetrahedra[:,3][np.where((triangulation_tetrahedra[:,0] == c[0])&(triangulation_tetrahedra[:,1] == c[1])&(triangulation_tetrahedra[:,2] == c[2]))]] for c in triangulation_tetrahedra],axis=0)
         corresponding_5_cliques = vq(triangulation_5_cliques[:,1:],triangulation_tetrahedra)
         triangulation_5_cliques = triangulation_5_cliques[np.where(corresponding_5_cliques[1] == 0)]
-        print n_5_cliques," 5-Cliques remaining"
+        # print n_5_cliques," 5-Cliques remaining"
 
         if exterior:
             tetrahedra_triangle_matching = np.array(np.concatenate([vq(triangulation_tetrahedra[:,1:],triangulation_triangles),
@@ -120,7 +120,7 @@ def tetrahedra_from_triangulation(triangulation_triangles,positions,exterior=Tru
             exterior_triangles = triangulation_triangles[np.where(triangle_tetrahedra == 1)]
             triangulation_tetrahedra = np.concatenate([triangulation_tetrahedra,np.sort([np.concatenate([[1],t]) for t in exterior_triangles])])
 
-    print triangulation_tetrahedra.shape[0]," cell vertices (+exterior)"
+    # print triangulation_tetrahedra.shape[0]," cell vertices (+exterior)"
 
     return triangulation_tetrahedra
 
@@ -135,8 +135,8 @@ def tetrahedrization_simulated_annealing_optimization(tetrahedra,positions,image
     triangulation_tetrahedra = np.copy(tetrahedra)
 
     if image_cell_vertex != None:
-        print np.sort(image_cell_vertex.keys())
-        print triangulation_tetrahedra
+        # print np.sort(image_cell_vertex.keys())
+        # print triangulation_tetrahedra
         cell_vertex_jaccard = jaccard_index(np.sort(image_cell_vertex.keys()),triangulation_tetrahedra)
         print "Cell vertices Jaccard : ",cell_vertex_jaccard
     else:
@@ -630,26 +630,26 @@ def tetrahedrization_clean_surface(initial_triangulation_topomesh, image_cell_ve
 
     if binary_image is None and segmented_image is not None:
         size = np.array(segmented_image.shape)
-        binary_image = SpatialImage(np.zeros(tuple(np.array(size*2,int)),np.uint8),resolution=segmented_image.resolution)
+        binary_image = SpatialImage(np.zeros(tuple(np.array(size*2,int)),np.uint8),voxelsize=segmented_image.voxelsize)
         binary_image[size[0]/2:3*size[0]/2,size[1]/2:3*size[1]/2,size[2]/2:3*size[2]/2][segmented_image>1] = 1
 
     if binary_image is not None:
         size = np.array(binary_image.shape)
-        resolution = np.array(binary_image.resolution)
+        voxelsize = np.array(binary_image.voxelsize)
         point_radius = 0.6
-        image_neighborhood = np.array(np.ceil(point_radius/np.array(binary_image.resolution)),int)
+        image_neighborhood = np.array(np.ceil(point_radius/np.array(binary_image.voxelsize)),int)
         structuring_element = np.zeros(tuple(2*image_neighborhood+1),np.uint8)
 
         neighborhood_coords = np.mgrid[-image_neighborhood[0]:image_neighborhood[0]+1,-image_neighborhood[1]:image_neighborhood[1]+1,-image_neighborhood[2]:image_neighborhood[2]+1]
         neighborhood_coords = np.concatenate(np.concatenate(np.transpose(neighborhood_coords,(1,2,3,0)))) + image_neighborhood
         neighborhood_coords = array_unique(neighborhood_coords)
             
-        neighborhood_distance = np.linalg.norm(neighborhood_coords*resolution - image_neighborhood*resolution,axis=1)
+        neighborhood_distance = np.linalg.norm(neighborhood_coords*voxelsize - image_neighborhood*voxelsize,axis=1)
         neighborhood_coords = neighborhood_coords[neighborhood_distance<=point_radius]
         neighborhood_coords = tuple(np.transpose(neighborhood_coords))
         structuring_element[neighborhood_coords] = 1
 
-        binary_image = SpatialImage(np.array(nd.binary_erosion(binary_image,structuring_element),np.uint8),resolution=resolution)
+        binary_image = SpatialImage(np.array(nd.binary_erosion(binary_image,structuring_element),np.uint8),voxelsize=voxelsize)
 
     surface_topomesh = kwargs.get('surface_topomesh',None)
 
@@ -657,11 +657,11 @@ def tetrahedrization_clean_surface(initial_triangulation_topomesh, image_cell_ve
         from openalea.mesh.utils.implicit_surfaces import implicit_surface_topomesh
         from openalea.draco_stem.stem.tissue_mesh_optimization import optimize_topomesh
         
-        grid_resolution = kwargs.get('grid_resolution',[8,8,8])
-        grid_binary_image = binary_image[0:binary_image.shape[0]:grid_resolution[0],0:binary_image.shape[1]:grid_resolution[1],0:binary_image.shape[2]:grid_resolution[2]]
+        grid_voxelsize = kwargs.get('grid_voxelsize',[8,8,8])
+        grid_binary_image = binary_image[0:binary_image.shape[0]:grid_voxelsize[0],0:binary_image.shape[1]:grid_voxelsize[1],0:binary_image.shape[2]:grid_voxelsize[2]]
 
-        surface_topomesh = implicit_surface_topomesh(grid_binary_image,np.array(grid_binary_image.shape),resolution*grid_resolution,center=True)
-        surface_topomesh.update_wisp_property('barycenter',0,surface_topomesh.wisp_property('barycenter',0).values()+np.array(grid_binary_image.shape)*resolution*grid_resolution/4.)
+        surface_topomesh = implicit_surface_topomesh(grid_binary_image,np.array(grid_binary_image.shape),voxelsize*grid_voxelsize,center=True)
+        surface_topomesh.update_wisp_property('barycenter',0,surface_topomesh.wisp_property('barycenter',0).values()+np.array(grid_binary_image.shape)*voxelsize*grid_voxelsize/4.)
         surface_topomesh = optimize_topomesh(surface_topomesh,omega_forces=dict(taubin_smoothing=0.65,neighborhood=1.0),edge_flip=True,iterations=10,iteration_per_step=2)
 
 
@@ -684,7 +684,7 @@ def tetrahedrization_clean_surface(initial_triangulation_topomesh, image_cell_ve
 
     if 'exterior' in surface_cleaning_criteria:
         triangulation_points = triangulation_topomesh.wisp_property('barycenter',0).values()
-        triangulation_point_coords = tuple(np.array(np.round(triangulation_points/resolution+size/2),np.uint16).transpose())
+        triangulation_point_coords = tuple(np.array(np.round(triangulation_points/voxelsize+size/2),np.uint16).transpose())
         exterior_point = array_dict(True-np.array(binary_image[triangulation_point_coords],bool),list(triangulation_topomesh.wisps(0)))
         triangulation_exterior_triangles = array_dict(np.any(exterior_point.values(triangulation_topomesh.wisp_property('vertices',2).values()),axis=1),list(triangulation_topomesh.wisps(2)))
 

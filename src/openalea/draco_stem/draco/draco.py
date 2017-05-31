@@ -80,7 +80,7 @@ class DracoMesh(object):
         else:
             self.segmented_image = imread(image_file)
         self.segmented_image[self.segmented_image==0] = 1
-        self.resolution = np.array(self.segmented_image.resolution)
+        self.voxelsize = np.array(self.segmented_image.voxelsize)
         self.size = np.array(self.segmented_image.shape)
         
         self.triangulation_topomesh = None
@@ -156,7 +156,7 @@ class DracoMesh(object):
             self.image_graph.add_edge(1,c)
 
         for v in self.image_cell_vertex.keys():
-            self.image_cell_vertex[v] = self.image_cell_vertex[v]*self.resolution
+            self.image_cell_vertex[v] = self.image_cell_vertex[v]*self.voxelsize
         image_cell_vertex_tetrahedra = np.sort(self.image_cell_vertex.keys())
         image_cell_vertex_tetrahedra = np.delete(image_cell_vertex_tetrahedra,np.where(image_cell_vertex_tetrahedra[:,0]==1)[0],axis=0)
         self.image_cell_vertex_topomesh = tetrahedra_topomesh(image_cell_vertex_tetrahedra,self.positions)
@@ -309,18 +309,18 @@ class DracoMesh(object):
         self.triangulation_topomesh = deepcopy(constructed_triangulation_topomesh)
 
 
-    def mesh_image_surface(self, layers=[], resolution = 8):
+    def mesh_image_surface(self, layers=[], voxelsize = 8):
         """Compute a surface mesh of the tissue object in the image.
 
         Args:
             layers (list): values of the cell layers to consider when computing the surface (1, 2 or 0)
-            resolution (int): sampling step of the produced mesh
+            voxelsize (int): sampling step of the produced mesh
         
         Returns:
             surface_topomesh (PropertyTopomesh): triangular mesh with no cell information representing the surface of the tissue
         """
 
-        grid_resolution = [resolution, resolution, resolution]
+        grid_voxelsize = [voxelsize, voxelsize, voxelsize]
         binary_img = np.zeros(tuple(np.array(self.size*2,int)),np.uint8)
         if len(layers) == 0:
             binary_img[self.size[0]/2:3*self.size[0]/2,self.size[1]/2:3*self.size[1]/2,self.size[2]/2:3*self.size[2]/2][self.segmented_image>1] = 1
@@ -329,11 +329,11 @@ class DracoMesh(object):
             layer_img[(np.any(np.array([self.cell_layer.values(self.segmented_image) == l for l in layers]),axis=0))|(self.segmented_image==1)] = 1
             binary_img[self.size[0]/2:3*self.size[0]/2,self.size[1]/2:3*self.size[1]/2,self.size[2]/2:3*self.size[2]/2][layer_img>1] = 1
 
-        binary_img = binary_img[0:binary_img.shape[0]:grid_resolution[0],0:binary_img.shape[1]:grid_resolution[1],0:binary_img.shape[2]:grid_resolution[2]]
+        binary_img = binary_img[0:binary_img.shape[0]:grid_voxelsize[0],0:binary_img.shape[1]:grid_voxelsize[1],0:binary_img.shape[2]:grid_voxelsize[2]]
 
         from openalea.mesh.utils.implicit_surfaces import implicit_surface_topomesh
-        self.surface_topomesh = implicit_surface_topomesh(binary_img,binary_img.shape,self.resolution*grid_resolution)
-        self.surface_topomesh.update_wisp_property('barycenter',0,self.surface_topomesh.wisp_property('barycenter',0).values()+np.array(binary_img.shape)*self.resolution*grid_resolution/4.)
+        self.surface_topomesh = implicit_surface_topomesh(binary_img,binary_img.shape,self.voxelsize*grid_voxelsize)
+        self.surface_topomesh.update_wisp_property('barycenter',0,self.surface_topomesh.wisp_property('barycenter',0).values()+np.array(binary_img.shape)*self.voxelsize*grid_voxelsize/4.)
 
         return self.surface_topomesh
 

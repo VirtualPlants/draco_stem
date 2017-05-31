@@ -35,7 +35,7 @@ image_topomesh = idra.idra_topomesh(mesh_fineness=1.0)
 
 cell_vertex_file = dirname+"/output_meshes/"+filename+"/image_cell_vertex.dict"
 image_cell_vertex = pickle.load(open(cell_vertex_file,'rb'))
-image_cell_vertex = dict(zip(image_cell_vertex.keys(),np.array(image_cell_vertex.values())*idra.resolution))
+image_cell_vertex = dict(zip(image_cell_vertex.keys(),np.array(image_cell_vertex.values())*idra.voxelsize))
 
 from openalea.mesh.utils.image_tools import compute_topomesh_image
 topomesh_img = compute_topomesh_image(image_topomesh,idra.segmented_image)
