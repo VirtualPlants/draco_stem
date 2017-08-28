@@ -1,13 +1,10 @@
-#<p style="text-align: center;">DRACO-STEM</p>
+# DRACO-STEM
 
-
-<p style="text-align: center;">
 
 <image src=https://github.com/VirtualPlants/draco_stem/blob/master/logo.png?raw=True width=200>
 
-</p>
 
-##Generating high-quality meshes of cell tissue from 3D segmented images
+## Generating high-quality meshes of cell tissue from 3D segmented images
 
 
 
@@ -15,22 +12,22 @@
 
 **SAM Tissue Enhanced Mesh (STEM)**
 
-###Authors:
+### Authors:
 * Guillaume Cerutti (guillaume.cerutti@inria.fr)
 
 
-###Institutes:
+### Institutes:
 * [<image src=https://www.inria.fr/extension/site_inria/design/site_inria/images/logos/logo_INRIA.png width=100>](http://www.inria.fr)
 
 
-###License: 
+### License: 
 * `Cecill-C`
 
-###Description
+### Description
 
 OpenAlea library for the reconstruction of 3D meshes from segmented shoot apical meristem (SAM) tissue images.
 
-###Installation
+### Installation
 
 [Procedure *via* **conda**](https://github.com/VirtualPlants/draco_stem/wiki/Installation)
 
