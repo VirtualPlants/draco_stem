@@ -2,6 +2,7 @@ import numpy as np
 
 from openalea.image.serial.all import imread, imsave
 from openalea.image.spatial_image import SpatialImage
+from vplants.tissue_analysis.property_spatial_image import PropertySpatialImage
 
 from openalea.draco_stem.draco.draco import DracoMesh
 from openalea.draco_stem.example_image import sphere_tissue_image
@@ -17,8 +18,16 @@ img = sphere_tissue_image(size=size, n_points=n_points, n_layers=n_layers)
 
 world.add(img,"segmented_image",colormap='glasbey',alphamap='constant',bg_id=1,alpha=0.25)
 
+p_img = PropertySpatialImage(img)
+p_img.compute_image_properties()
+p_img.compute_cell_meshes(sub_factor=2)
+world.add(p_img,'property_segmented_image')
+
 draco = DracoMesh(image=img)
-draco.delaunay_adjacency_complex(surface_cleaning_criteria=[])
+
+draco.layer_adjacency_complex()
+
+# draco.delaunay_adjacency_complex(surface_cleaning_criteria=[])
 
 world.add(draco.triangulation_topomesh,'adjacency_complex')
 world['adjacency_complex']['display_3'] = False
@@ -27,19 +36,28 @@ world['adjacency_complex_vertices']['display_colorbar'] = False
 world['adjacency_complex_vertices']['polydata_colormap'] = load_colormaps()['glasbey']
 world['adjacency_complex_vertices']['point_radius'] = 1.5
 
-draco.adjacency_complex_optimization(n_iterations=3)
+# draco.adjacency_complex_optimization(n_iterations=3)
 
-world['adjacency_complex']['coef_3'] = 0.9
-world['adjacency_complex']['display_3'] = True
-world['adjacency_complex_cells']['display_colorbar'] = False
-world['adjacency_complex_cells']['polydata_colormap'] = load_colormaps()['grey']
-world['adjacency_complex_cells']['intensity_range'] = (-1,0)
-world['adjacency_complex_cells']['preserve_faces'] = True
-world['adjacency_complex_cells']['x_slice'] = (0,90)
+# world['adjacency_complex']['coef_3'] = 0.9
+# world['adjacency_complex']['display_3'] = True
+# world['adjacency_complex_cells']['display_colorbar'] = False
+# world['adjacency_complex_cells']['polydata_colormap'] = load_colormaps()['grey']
+# world['adjacency_complex_cells']['intensity_range'] = (-1,0)
+# world['adjacency_complex_cells']['preserve_faces'] = True
+# world['adjacency_complex_cells']['x_slice'] = (0,90)
 
-triangular = ['star','remeshed','projected','flat']
-image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3, maximal_edge_length=5.1)
+world['adjacency_complex']['coef_2'] = 0.9
+world['adjacency_complex']['display_2'] = True
+world['adjacency_complex_faces']['display_colorbar'] = False
+world['adjacency_complex_faces']['polydata_colormap'] = load_colormaps()['grey']
+world['adjacency_complex_faces']['intensity_range'] = (-1,0)
 
+
+# triangular = ['star','remeshed','projected','flat']
+# image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=3, maximal_edge_length=5.1)
+
+triangular = ['star','remeshed','projected','straight']
+image_dual_topomesh = draco.dual_reconstruction(reconstruction_triangulation = triangular, adjacency_complex_degree=2, maximal_edge_length=3.)
 
 
 from openalea.cellcomplex.property_topomesh.property_topomesh_analysis import compute_topomesh_property, compute_topomesh_vertex_property_from_faces

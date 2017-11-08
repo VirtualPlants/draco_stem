@@ -649,7 +649,9 @@ def tetrahedrization_clean_surface(initial_triangulation_topomesh, image_cell_ve
         neighborhood_coords = tuple(np.transpose(neighborhood_coords))
         structuring_element[neighborhood_coords] = 1
 
-        binary_image = SpatialImage(np.array(nd.binary_erosion(binary_image,structuring_element),np.uint8),voxelsize=voxelsize)
+        binary_image = np.array(nd.binary_erosion(binary_image,structuring_element),np.uint8)
+        print binary_image.shape, voxelsize
+        binary_image = SpatialImage(binary_image,voxelsize=tuple(list(voxelsize)))
 
     surface_topomesh = kwargs.get('surface_topomesh',None)
 
