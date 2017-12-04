@@ -409,7 +409,7 @@ def tetrahedra_dual_triangular_topomesh(triangulation_topomesh,image_cell_vertex
     if image_cell_vertex is not None and vertex_motion:
         compute_topomesh_property(image_topomesh,'cells',0)
         mesh_vertices = np.sort([image_topomesh.wisp_property('cells',0)[v] if (len(image_topomesh.wisp_property('cells',0)[v])==4) else np.concatenate([[1],image_topomesh.wisp_property('cells',0)[v]]) for v in image_topomesh.wisps(0) if len(image_topomesh.wisp_property('cells',0)[v]) in [3,4]])
-        mesh_cell_vertex = dict(zip(mesh_vertices,[v for v in image_topomesh.wisps(0) if len(image_topomesh.wisp_property('cells',0)[v]) in [3,4]]))
+        mesh_cell_vertex = dict(zip([tuple(m) for m in mesh_vertices],[v for v in image_topomesh.wisps(0) if len(image_topomesh.wisp_property('cells',0)[v]) in [3,4]]))
         
         cell_vertex_matching = vq(np.sort(np.array(image_cell_vertex.keys())),mesh_vertices)
         
