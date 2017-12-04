@@ -208,7 +208,7 @@ class DracoMesh(object):
             self.layer_triangle_topomesh['L1_L2'] =  triangle_topomesh(triangles_from_adjacency_edges(L1_L2_edges),self.positions)
 
 
-    def delaunay_adjacency_complex(self, surface_cleaning_criteria = ['surface','exterior','distance','sliver']):
+    def delaunay_adjacency_complex(self, surface_cleaning_criteria = ['surface','exterior','distance','sliver'], maximal_distance=None):
         """Estimate the adjacency complex by the Delaunay tetrahedrization of the cell barycenters.
 
         Since Delaunay applied on the cell barycenters would produce a convex simplicial complex, it is necessary 
@@ -229,7 +229,7 @@ class DracoMesh(object):
         """     
 
         clean_surface = len(surface_cleaning_criteria)>0
-        self.delaunay_topomesh = delaunay_tetrahedrization_topomesh(self.positions, image_cell_vertex=self.image_cell_vertex, segmented_image=self.segmented_image, clean_surface=clean_surface, surface_cleaning_criteria=surface_cleaning_criteria)
+        self.delaunay_topomesh = delaunay_tetrahedrization_topomesh(self.positions, image_cell_vertex=self.image_cell_vertex, segmented_image=self.segmented_image, clean_surface=clean_surface, surface_cleaning_criteria=surface_cleaning_criteria, maximal_distance=maximal_distance)
         clean_tetrahedrization(self.delaunay_topomesh, clean_vertices=False)
         discarded_cells = np.array(list(self.delaunay_topomesh.wisps(0)))[np.where(np.array(map(len,[list(self.delaunay_topomesh.regions(0,v,2)) for v in self.delaunay_topomesh.wisps(0)]))==0)[0]]
         for v in discarded_cells:
