@@ -932,7 +932,9 @@ def tetrahedrization_topomesh_topological_optimization(input_triangulation_topom
             def edge_exterior_positions(positions,exterior_positions,edge_cell_array):
                 import numpy as np
                 cell_positions = positions.values(edge_cell_array)
-                cell_positions[np.where(edge_cell_array==1)] = exterior_positions[np.where(edge_cell_array==1)[0]]
+                edge_cell_coords = np.where(edge_cell_array==1)
+                if len(edge_cell_coords)>0:
+                    cell_positions[edge_cell_coords] = exterior_positions[edge_cell_coords[0]]
                 return cell_positions
             
             edge_middles = edge_exterior_positions(positions,exterior_positions,edge_cells).mean(axis=1)
