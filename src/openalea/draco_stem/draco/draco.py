@@ -208,7 +208,7 @@ class DracoMesh(object):
             self.layer_triangle_topomesh['L1_L2'] =  triangle_topomesh(triangles_from_adjacency_edges(L1_L2_edges),self.positions)
 
 
-    def delaunay_adjacency_complex(self, surface_cleaning_criteria = ['surface','exterior','distance','sliver'], maximal_distance=None):
+    def delaunay_adjacency_complex(self, surface_cleaning_criteria =['surface','exterior','distance','sliver'], maximal_distance=None):
         """Estimate the adjacency complex by the Delaunay tetrahedrization of the cell barycenters.
 
         Since Delaunay applied on the cell barycenters would produce a convex simplicial complex, it is necessary 

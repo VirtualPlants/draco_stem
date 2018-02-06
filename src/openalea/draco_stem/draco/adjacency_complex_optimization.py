@@ -545,20 +545,21 @@ def tetrahedrization_topomesh_remove_exterior(triangulation_topomesh):
 
 
 
-def delaunay_tetrahedrization_topomesh(positions, image_cell_vertex=None, **kwargs):
+def delaunay_tetrahedrization_topomesh(positions, image_cell_vertex=None, clean_surface=False, **kwargs):
     """
     Generate a simplicial complex of cell adjacency using Delaunay 3D
 
     Inputs:
         * positions : dictionary mapping cell ids to center point positions
         ** image_cell_vertex (optional) : dictionary of cell adjacency tetrahedra present in the segemented image
+        ** clean_surface : whether or not to apply surface cleaning of the complex with default criteria
         ++ extension (kwargs) : transformation to apply to positions to enhance the performance of Delaunay
 
     The points in positions are 'triangulated' by a Delaunay tetrahedrization, that is later on optimized to remove exterior triangles
     of unlikely size, and uncover concave parts of the tissue. This optimization is performed based on a nuclei distance criterion.
 
     Outputs:
-        * triangulation_topomesh : a PropertyTopomesh containing a valid complex of cell adjaceny tetrahedra (exterior not represented)
+        * triangulation_topomesh : a PropertyTopomesh containing a valid complex of cell adjacency tetrahedra (exterior not represented)
     """
 
     # from openalea.plantgl.algo import delaunay_triangulation3D, delaunay_triangulation
@@ -609,16 +610,26 @@ def delaunay_tetrahedrization_topomesh(positions, image_cell_vertex=None, **kwar
     end_time = time()
     print "<-- Generating triangulation topomesh [",end_time-start_time,"s]"
 
-    clean_surface = kwargs.get('clean_surface',True)
-
     if not clean_surface:
         return triangulation_topomesh
     else:
         return tetrahedrization_clean_surface(triangulation_topomesh, image_cell_vertex=image_cell_vertex, **kwargs)
 
 
-def tetrahedrization_clean_surface(initial_triangulation_topomesh, image_cell_vertex=None, **kwargs):
-    
+
+def tetrahedrization_clean_surface(initial_triangulation_topomesh, surface_cleaning_criteria=['surface','exterior','distance','sliver'], image_cell_vertex=None, **kwargs):
+    """
+    Clean a simplicial complex of cell adjacency by iteratively surface triangles with bad properties
+
+    Inputs:
+        * initial_triangulation_topomesh : a PropertyTopomesh containing tetrahedra of cell adjacencies to clean
+        ** surface_cleaning_criteria : list of criteria to take into account for the iterative triangle removal
+        ** image_cell_vertex (optional) : dictionary of cell adjacency tetrahedra present in the segemented image
+
+    Outputs:
+        * triangulation_topomesh : a PropertyTopomesh containing the cleaned set of tetrahedra (exterior not represented)
+    """
+
     triangulation_topomesh = deepcopy(initial_triangulation_topomesh)
 
     positions = triangulation_topomesh.wisp_property('barycenter',0)
@@ -662,12 +673,10 @@ def tetrahedrization_clean_surface(initial_triangulation_topomesh, image_cell_ve
         grid_voxelsize = kwargs.get('grid_voxelsize',[8,8,8])
         grid_binary_image = binary_image[0:binary_image.shape[0]:grid_voxelsize[0],0:binary_image.shape[1]:grid_voxelsize[1],0:binary_image.shape[2]:grid_voxelsize[2]]
 
-        surface_topomesh = implicit_surface_topomesh(grid_binary_image,np.array(grid_binary_image.shape),voxelsize*grid_voxelsize,center=True)
+        surface_topomesh = implicit_surface_topomesh(grid_binary_image,np.array(grid_binary_image.shape),voxelsize*grid_voxelsize,center=True,smoothing=0,decimation=0)
         surface_topomesh.update_wisp_property('barycenter',0,surface_topomesh.wisp_property('barycenter',0).values()+np.array(grid_binary_image.shape)*voxelsize*grid_voxelsize/4.)
         surface_topomesh = optimize_topomesh(surface_topomesh,omega_forces=dict(taubin_smoothing=0.65,neighborhood=1.0),edge_flip=True,iterations=10,iteration_per_step=2)
 
-
-    surface_cleaning_criteria = kwargs.get('surface_cleaning_criteria',['surface','exterior','distance','sliver'])
     if surface_topomesh is None:
         if 'surface' in surface_cleaning_criteria:
             surface_cleaning_criteria.remove('surface')
