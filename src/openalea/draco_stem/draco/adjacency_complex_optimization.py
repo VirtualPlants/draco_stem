@@ -617,7 +617,7 @@ def delaunay_tetrahedrization_topomesh(positions, image_cell_vertex=None, clean_
 
 
 
-def tetrahedrization_clean_surface(initial_triangulation_topomesh, surface_cleaning_criteria=['surface','exterior','distance','sliver'], image_cell_vertex=None, **kwargs):
+def tetrahedrization_clean_surface(initial_triangulation_topomesh, surface_cleaning_criteria=['surface','exterior','distance','sliver'], maximal_distance=None, maximal_eccentricity=0.95, image_cell_vertex=None, **kwargs):
     """
     Clean a simplicial complex of cell adjacency by iteratively surface triangles with bad properties
 
@@ -706,7 +706,6 @@ def tetrahedrization_clean_surface(initial_triangulation_topomesh, surface_clean
     if 'distance' in surface_cleaning_criteria:
         triangulation_triangle_max_length = array_dict(np.max(triangulation_topomesh.wisp_property('length',1).values(triangulation_triangle_edges),axis=1),list(triangulation_topomesh.wisps(2)))
 
-        maximal_distance = kwargs.get('maximal_distance',None)
         if maximal_distance is None:
             if image_cell_vertex is not None:
                 image_edges = array_unique(np.concatenate(np.array(image_cell_vertex.keys())[:,tetra_triangle_edge_list]))
@@ -725,7 +724,6 @@ def tetrahedrization_clean_surface(initial_triangulation_topomesh, surface_clean
         triangulation_topomesh.update_wisp_property('eccentricity',3,triangulation_tetrahedra_eccentricities.values(list(triangulation_topomesh.wisps(3))),list(triangulation_topomesh.wisps(3)))    
         triangulation_triangle_sliver = array_dict(map(np.mean,triangulation_tetrahedra_eccentricities.values(triangulation_topomesh.wisp_property('cells',2).values())),list(triangulation_topomesh.wisps(2)))
 
-        maximal_eccentricity = kwargs.get('maximal_eccentricity',0.95)
 
     # triangulation_topomesh_triangle_to_delete = np.zeros_like(list(triangulation_topomesh.wisps(2)),bool)
     # if 'surface' in surface_cleaning_criteria:
