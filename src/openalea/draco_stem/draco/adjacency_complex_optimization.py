@@ -545,7 +545,7 @@ def tetrahedrization_topomesh_remove_exterior(triangulation_topomesh):
 
 
 
-def delaunay_tetrahedrization_topomesh(positions, image_cell_vertex=None, clean_surface=False, **kwargs):
+def delaunay_tetrahedrization_topomesh(positions, image_cell_vertex=None, clean_surface=False, extension=np.array([1,1,1]), **kwargs):
     """
     Generate a simplicial complex of cell adjacency using Delaunay 3D
 
@@ -568,7 +568,8 @@ def delaunay_tetrahedrization_topomesh(positions, image_cell_vertex=None, clean_
 
     points = positions.keys()
 
-    extension = kwargs.get('extension',np.array([1,1,0.7]))
+    if extension is None:
+        extension = np.array([1,1,0.7])
     triangulation = delaunay_triangulation(positions.values(points)*extension)
     triangulation_triangles = np.sort(points[np.array(triangulation)[np.array(triangulation).sum(axis=1)>0]])
 
