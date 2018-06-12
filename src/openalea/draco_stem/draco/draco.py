@@ -208,7 +208,7 @@ class DracoMesh(object):
             self.layer_triangle_topomesh['L1_L2'] =  triangle_topomesh(triangles_from_adjacency_edges(L1_L2_edges),self.positions)
 
 
-    def delaunay_adjacency_complex(self, surface_cleaning_criteria =['surface','exterior','distance','sliver'], maximal_distance=None, maximal_eccentricity=0.95):
+    def delaunay_adjacency_complex(self, surface_cleaning_criteria =['surface','exterior','distance','sliver'], maximal_distance=None, maximal_eccentricity=0.95, surface_topomesh=None):
         """Estimate the adjacency complex by the Delaunay tetrahedrization of the cell barycenters.
 
         Since Delaunay applied on the cell barycenters would produce a convex simplicial complex, it is necessary 
@@ -228,8 +228,11 @@ class DracoMesh(object):
             None
         """     
 
+        if surface_topomesh is not None:
+            self.surface_topomesh = surface_topomesh
+
         clean_surface = len(surface_cleaning_criteria)>0
-        self.delaunay_topomesh = delaunay_tetrahedrization_topomesh(self.positions, image_cell_vertex=self.image_cell_vertex, segmented_image=self.segmented_image, clean_surface=clean_surface, surface_cleaning_criteria=surface_cleaning_criteria, maximal_distance=maximal_distance, maximal_eccentricity=maximal_eccentricity)
+        self.delaunay_topomesh = delaunay_tetrahedrization_topomesh(self.positions, image_cell_vertex=self.image_cell_vertex, segmented_image=self.segmented_image, surface_topomesh=surface_topomesh, clean_surface=clean_surface, surface_cleaning_criteria=surface_cleaning_criteria, maximal_distance=maximal_distance, maximal_eccentricity=maximal_eccentricity)
         clean_tetrahedrization(self.delaunay_topomesh, clean_vertices=False)
         discarded_cells = np.array(list(self.delaunay_topomesh.wisps(0)))[np.where(np.array(map(len,[list(self.delaunay_topomesh.regions(0,v,2)) for v in self.delaunay_topomesh.wisps(0)]))==0)[0]]
         for v in discarded_cells:
@@ -371,7 +374,8 @@ class DracoMesh(object):
         if reconstruction_triangulation is not None:
             self.reconstruction_triangulation = reconstruction_triangulation
 
-        self.mesh_image_surface()
+        if self.surface_topomesh is None:
+            self.mesh_image_surface()
 
         if adjacency_complex_degree == 3:
             tetrahedrization_topomesh_add_exterior(self.triangulation_topomesh)

@@ -1,5 +1,6 @@
 #<p style="text-align: center;">DRACO-STEM</p>
 
+[![Documentation Status](https://readthedocs.org/projects/draco-stem/badge/?version=latest)](https://draco-stem.readthedocs.io/en/latest/?badge=latest)
 
 <p style="text-align: center;">
 
